@@ -1274,9 +1274,11 @@ function renderMonthlyChart() {
     if (item.plan_otplate && item.plan_otplate.rate) {
       item.plan_otplate.rate.forEach(rata => {
         if (!rata.datum || rata.isplacena) return;
-        const d = new Date(rata.datum);
-        if (d.getFullYear() === year) {
-          expected[d.getMonth()] += rata.iznos || 0;
+        // Koristimo string substring da izbegnemo timezone bug
+        const rYear = parseInt(rata.datum.substring(0, 4));
+        const rMonth = parseInt(rata.datum.substring(5, 7)) - 1;
+        if (rYear === year) {
+          expected[rMonth] += rata.iznos || 0;
         }
       });
     }
@@ -5409,19 +5411,20 @@ function renderKalendar(c) {
     if (item.plan_otplate && item.plan_otplate.rate) {
       item.plan_otplate.rate.forEach(rata => {
         if (!rata.datum) return;
-        const d = new Date(rata.datum);
-        const mk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        // Koristimo string substring da izbegnemo timezone bug
+        const mk = rata.datum.substring(0, 7);
         if (!byMonth[mk]) byMonth[mk] = { actualPaid: 0, expected: 0, entries: [] };
         if (rata.isplacena) {
-          byMonth[mk].actualPaid += rata.iznos || 0;
+          // isplacena rata je vec u item.uplate mapi — ne broji dvostruko
+          // samo je prikazujemo kao planned-paid za informaciju
         } else {
           byMonth[mk].expected += rata.iznos || 0;
+          byMonth[mk].entries.push({
+            type: 'planned',
+            item: label, customer, amount: rata.iznos || 0,
+            source: rata.opis || 'Plan otplate'
+          });
         }
-        byMonth[mk].entries.push({
-          type: rata.isplacena ? 'paid' : 'planned',
-          item: label, customer, amount: rata.iznos || 0,
-          source: rata.opis || 'Plan otplate'
-        });
       });
     }
   };
@@ -5444,7 +5447,7 @@ function renderKalendar(c) {
   });
   
   // Ensure all months from 2024 to 2030 exist so calendar is complete
-  const startYear = 2025;
+  const startYear = 2024;
   const endYear = 2030;
   for (let y = startYear; y <= endYear; y++) {
     for (let m = 1; m <= 12; m++) {
@@ -5692,15 +5695,17 @@ function showMonthDetails(monthKey) {
     if (item.plan_otplate && item.plan_otplate.rate) {
       item.plan_otplate.rate.forEach(rata => {
         if (!rata.datum) return;
-        const d = new Date(rata.datum);
-        const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        // Koristimo string substring da izbegnemo timezone bug
+        const k = rata.datum.substring(0, 7);
         if (k === monthKey) {
-          const entry = {
-            label, customer, amount: rata.iznos || 0,
-            source: rata.opis || 'Plan otplate', onclickJs
-          };
-          if (rata.isplacena) paidEntries.push(entry);
-          else plannedEntries.push(entry);
+          if (rata.isplacena) {
+            // isplacena rata je vec u item.uplate mapi — ne broji dvostruko
+          } else {
+            plannedEntries.push({
+              label, customer, amount: rata.iznos || 0,
+              source: rata.opis || 'Plan otplate', onclickJs
+            });
+          }
         }
       });
     }
