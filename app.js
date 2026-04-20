@@ -5444,7 +5444,7 @@ function renderKalendar(c) {
   });
   
   // Ensure all months from 2024 to 2030 exist so calendar is complete
-  const startYear = 2024;
+  const startYear = 2025;
   const endYear = 2030;
   for (let y = startYear; y <= endYear; y++) {
     for (let m = 1; m <= 12; m++) {
@@ -5538,11 +5538,20 @@ function renderMonthCard(key, monthData, isHighlight) {
   const expected = data.expected || 0;
   
   // Separate planned paid vs unexpected paid
-  const plannedPaid = data.entries ? data.entries.filter(e => e.type === 'paid' && e.source !== 'Naplaćeno' || (e.type === 'paid')).reduce((s,e) => s, 0) : 0;
-  const unexpectedPaid = data.entries ? data.entries.filter(e => e.type === 'paid').reduce((s,e) => s + e.amount, 0) : paid;
-  const hasPlanned = expected > 0;
-  const hasUnexpected = paid > 0 && expected === 0;
-  const hasMixed = paid > 0 && expected > 0;
+  // plannedPaid = payments that correspond to planirane_rate entries
+  // unexpectedPaid = payments with no corresponding plan
+  const plannedEntries = data.entries ? data.entries.filter(e => e.type === 'planned') : [];
+  const paidEntries = data.entries ? data.entries.filter(e => e.type === 'paid') : [];
+  const plannedTotal = plannedEntries.reduce((s,e) => s + e.amount, 0);
+  const paidTotal = paidEntries.reduce((s,e) => s + e.amount, 0);
+  
+  // Paid against plan vs unexpected
+  const paidAgainstPlan = Math.min(paidTotal, plannedTotal);
+  const unexpectedAmount = Math.max(0, paidTotal - plannedTotal);
+  
+  const hasPlanned = expected > 0 || plannedTotal > 0;
+  const hasUnexpected = unexpectedAmount > 0 && expected === 0 && plannedTotal === 0;
+  const hasMixed = unexpectedAmount > 0 && (expected > 0 || plannedTotal > 0);
   
   const total = paid + expected;
   const paidPct = (paid + expected) > 0 ? Math.round(paid/(paid+expected)*100) : 0;
