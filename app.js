@@ -2185,6 +2185,21 @@ function savePayment(lamela, stan, monthKey, monthName, oldAmount) {
   renderView();
   logActivity('UPLATA', `Stan ${a.lamela}-${a.stan} · ${a.ime || ''} · ${fmtEur(receiptAmount)}`);
   showToast('Uplata sačuvana, priznanica izdata', 'success');
+  
+  // Save to Supabase - insert payment directly by lamela/stan lookup
+  if (_isOnline) {
+    sbUpsertApartment(a).then(() => {
+      const sb = getSupabase();
+      if (!sb || !a._id) return;
+      sb.from('apartment_payments').insert({
+        apartment_id: a._id,
+        month_key: monthKey,
+        amount: receiptAmount,
+        payment_date: date || null,
+        tip: 'uplata'
+      }).then(({error}) => { if(error) console.error('payment insert', error.message); });
+    }).catch(()=>{});
+  }
 }
 
 function deletePayment(lamela, stan, monthKey) {
@@ -5521,10 +5536,17 @@ function renderMonthCard(key, monthData, isHighlight) {
   const data = monthData || { actualPaid: 0, expected: 0, entries: [] };
   const paid = data.actualPaid || 0;
   const expected = data.expected || 0;
-  const total = paid + expected;
-  const paidPct = total > 0 ? Math.round(paid/total*100) : 0;
-  const entriesCount = data.entries ? data.entries.filter(e => e.amount > 0).length : 0;
+  
+  // Separate planned paid vs unexpected paid
+  const plannedPaid = data.entries ? data.entries.filter(e => e.type === 'paid' && e.source !== 'Naplaćeno' || (e.type === 'paid')).reduce((s,e) => s, 0) : 0;
+  const unexpectedPaid = data.entries ? data.entries.filter(e => e.type === 'paid').reduce((s,e) => s + e.amount, 0) : paid;
+  const hasPlanned = expected > 0;
   const hasUnexpected = paid > 0 && expected === 0;
+  const hasMixed = paid > 0 && expected > 0;
+  
+  const total = paid + expected;
+  const paidPct = (paid + expected) > 0 ? Math.round(paid/(paid+expected)*100) : 0;
+  const entriesCount = data.entries ? data.entries.filter(e => e.amount > 0).length : 0;
   
   return `
     <div class="kalendar-month-card ${isCurrent ? 'current' : ''} ${isHighlight ? 'highlight' : ''}" onclick="showMonthDetails('${key}')">
@@ -5538,13 +5560,38 @@ function renderMonthCard(key, monthData, isHighlight) {
       <div style="font-size:20px; font-weight:700; color:var(--accent); margin-bottom:4px;">${fmtEur(total)}</div>
       <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">${entriesCount} ${entriesCount === 1 ? 'stavka' : 'stavki'}</div>
       ${total > 0 ? `
-        <div style="height:6px; background:var(--surface-3); border-radius:3px; overflow:hidden; margin-bottom:4px;">
-          <div style="height:100%; width:${hasUnexpected ? 100 : paidPct}%; background:${hasUnexpected ? 'linear-gradient(to right, #3b82f6, #60a5fa)' : 'linear-gradient(to right, #22c55e, #4ade80)'};"></div>
-        </div>
-        <div style="display:flex; justify-content:space-between; font-size:10px;">
-          <span style="color:${hasUnexpected ? '#60a5fa' : 'var(--success)'};">${hasUnexpected ? '⚡ ' : ''}${fmtEur(paid)}</span>
-          <span style="color:${expected > 0 ? 'var(--accent)' : 'var(--text-dim)'}; font-style:${hasUnexpected ? 'italic' : 'normal'};">${hasUnexpected ? 'neočekivano' : fmtEur(expected)}</span>
-        </div>
+        ${hasMixed ? `
+          <!-- Mixed: planned + unexpected - show two bars -->
+          <div style="height:6px; background:var(--surface-3); border-radius:3px; overflow:hidden; margin-bottom:2px;">
+            <div style="height:100%; width:${paidPct}%; background:linear-gradient(to right, #22c55e, #4ade80);"></div>
+          </div>
+          <div style="height:4px; background:var(--surface-3); border-radius:3px; overflow:hidden; margin-bottom:4px;">
+            <div style="height:100%; width:100%; background:linear-gradient(to right, #3b82f6, #60a5fa); opacity:0.7;"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:10px;">
+            <span style="color:var(--success);">${fmtEur(paid)}</span>
+            <span style="color:var(--accent);">${fmtEur(expected)}</span>
+          </div>
+          <div style="font-size:9px; color:#60a5fa; margin-top:2px;">⚡ sadrži neočekivane uplate</div>
+        ` : hasUnexpected ? `
+          <!-- Only unexpected -->
+          <div style="height:6px; background:var(--surface-3); border-radius:3px; overflow:hidden; margin-bottom:4px;">
+            <div style="height:100%; width:100%; background:linear-gradient(to right, #3b82f6, #60a5fa);"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:10px;">
+            <span style="color:#60a5fa;">⚡ ${fmtEur(paid)}</span>
+            <span style="color:var(--text-dim); font-style:italic;">neočekivano</span>
+          </div>
+        ` : `
+          <!-- Only planned -->
+          <div style="height:6px; background:var(--surface-3); border-radius:3px; overflow:hidden; margin-bottom:4px;">
+            <div style="height:100%; width:${paidPct}%; background:linear-gradient(to right, #22c55e, #4ade80);"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:10px;">
+            <span style="color:var(--success);">${fmtEur(paid)}</span>
+            <span style="color:${expected > 0 ? 'var(--accent)' : 'var(--text-dim)'};">${fmtEur(expected)}</span>
+          </div>
+        `}
       ` : '<div style="font-size:11px; color:var(--text-dim); font-style:italic;">Nema stavki</div>'}
     </div>
   `;
