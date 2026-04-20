@@ -793,13 +793,22 @@ function enterApp() {
   logActivity('LOGIN', `Prijava: ${currentUser} (${role})`);
   saveToCache();
   updateNotificationBadge();
+  
+  // Show loading spinner while syncing
+  const content = document.getElementById('content');
+  if (content) content.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:16px;"><div style="width:40px;height:40px;border:3px solid var(--surface-3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div><div style="color:var(--text-dim);">Učitavanje podataka...</div></div>';
+  
   switchView('dashboard');
-  // Force sync from Supabase after login to ensure fresh data
+  
   if (_isOnline) {
     syncFromSupabase().then(() => {
       renderView();
       updateNotificationBadge();
-    }).catch(() => {});
+    }).catch(() => {
+      renderView();
+    });
+  } else {
+    renderView();
   }
 }
 
