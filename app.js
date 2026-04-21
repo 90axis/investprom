@@ -112,18 +112,24 @@ async function syncFromSupabase() {
       garPayMap[p.garage_id][mk] = (garPayMap[p.garage_id][mk]||0) + parseFloat(p.amount||0);
     });
 
-    DATA.apartments = (apts.data||[]).map(a => ({
-      _id: a.id, lamela: a.lamela, stan: a.stan, sprat: a.sprat||'',
-      ime: a.ime||'', prodat: a.prodat, vlasnik_parcele: a.vlasnik_parcele,
-      ugovor: a.ugovor, predugovor: a.predugovor||false,
-      povrsina: +a.povrsina||0, cena_m2: +a.cena_m2||0, cena_m2_pdv: +a.cena_m2_pdv||0,
-      vrednost_bez_pdv: +a.vrednost_bez_pdv||0, vrednost_sa_pdv: +a.vrednost_sa_pdv||0,
-      isplaceno: +a.isplaceno||0, preostalo: +a.preostalo||0,
-      napomena: a.napomena||'', ugovorena_cena: a.ugovorena_cena ? +a.ugovorena_cena : null,
-      datum_prodaje: a.datum_prodaje||null, plan_otplate: a.plan_otplate||null,
-      slike: a.slike||[], uplate: aptPayMap[a.id]||{},
-      uplate_dates: {}, planirane_rate: a.planirane_rate||{}
-    }));
+    DATA.apartments = (apts.data||[]).map(a => {
+      // Uvijek racunaj isplaceno iz apartment_payments tabele, ne iz kolone
+      const uplate = aptPayMap[a.id] || {};
+      const isplaceno = Object.values(uplate).reduce((s, v) => s + v, 0);
+      const vrednost_sa_pdv = +a.vrednost_sa_pdv || 0;
+      return {
+        _id: a.id, lamela: a.lamela, stan: a.stan, sprat: a.sprat||'',
+        ime: a.ime||'', prodat: a.prodat, vlasnik_parcele: a.vlasnik_parcele,
+        ugovor: a.ugovor, predugovor: a.predugovor||false,
+        povrsina: +a.povrsina||0, cena_m2: +a.cena_m2||0, cena_m2_pdv: +a.cena_m2_pdv||0,
+        vrednost_bez_pdv: +a.vrednost_bez_pdv||0, vrednost_sa_pdv,
+        isplaceno, preostalo: vrednost_sa_pdv - isplaceno,
+        napomena: a.napomena||'', ugovorena_cena: a.ugovorena_cena ? +a.ugovorena_cena : null,
+        datum_prodaje: a.datum_prodaje||null, plan_otplate: a.plan_otplate||null,
+        slike: a.slike||[], uplate,
+        uplate_dates: {}, planirane_rate: a.planirane_rate||{}
+      };
+    });
 
     DATA.garages = (gars.data||[]).map(g => ({
       _id: g.id, broj: g.broj, ime: g.ime||'', vlasnik_parcele: g.vlasnik_parcele,
@@ -5623,7 +5629,7 @@ function renderMonthCard(key, monthData, isHighlight) {
             <span style="color:var(--success);">${fmtEur(paid)}</span>
             <span style="color:var(--accent);">${fmtEur(expected)}</span>
           </div>
-          <div style="font-size:9px; color:#60a5fa; margin-top:2px;">⚡ sadrži neočekivane uplate</div>
+          <div style="font-size:9px; color:#60a5fa; margin-top:2px;">⚡ sadrži novu prodaju</div>
         ` : hasUnexpected ? `
           <!-- Only unexpected -->
           <div style="height:6px; background:var(--surface-3); border-radius:3px; overflow:hidden; margin-bottom:4px;">
@@ -5631,7 +5637,7 @@ function renderMonthCard(key, monthData, isHighlight) {
           </div>
           <div style="display:flex; justify-content:space-between; font-size:10px;">
             <span style="color:#60a5fa;">⚡ ${fmtEur(paid)}</span>
-            <span style="color:var(--text-dim); font-style:italic;">neočekivano</span>
+            <span style="color:var(--text-dim); font-style:italic;">nova prodaja</span>
           </div>
         ` : `
           <!-- Only planned -->
