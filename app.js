@@ -122,7 +122,7 @@ async function syncFromSupabase() {
       napomena: a.napomena||'', ugovorena_cena: a.ugovorena_cena ? +a.ugovorena_cena : null,
       datum_prodaje: a.datum_prodaje||null, plan_otplate: a.plan_otplate||null,
       slike: a.slike||[], uplate: aptPayMap[a.id]||{},
-      uplate_dates: {}, planirane_rate: {}
+      uplate_dates: {}, planirane_rate: a.planirane_rate||{}
     }));
 
     DATA.garages = (gars.data||[]).map(g => ({
@@ -872,9 +872,7 @@ function getUpcomingRatesCount() {
   let count = 0;
   const items = [...DATA.apartments, ...(DATA.garages||[]), ...(DATA.ostave||[])];
   items.forEach(item => {
-    // Uključi stavke koje su prodane ILI imaju aktivan plan otplate
-    const imaAktivanPlan = item.plan_otplate && item.plan_otplate.rate && item.plan_otplate.rate.length > 0;
-    if ((!item.prodat && !imaAktivanPlan) || item.vlasnik_parcele) return;
+    if (!item.prodat || item.vlasnik_parcele) return;
     if (item.planirane_rate) {
       Object.keys(item.planirane_rate).forEach(mk => { if (mk >= nowKey && mk <= in7Key) count++; });
     }
@@ -1052,20 +1050,9 @@ function renderDashboard(c) {
     }
     if (item.plan_otplate && item.plan_otplate.rate) {
       item.plan_otplate.rate.forEach(rata => {
-        if (!rata.datum) return;
+        if (!rata.datum || rata.isplacena) return;
         const mk = rata.datum.substring(0,7);
-        if (mk === currentMonthKey) {
-          if (!rata.isplacena) {
-            // Neplaćena rata u tekućem mesecu
-            expectedThisMonth += rata.iznos || 0;
-          } else {
-            // Plaćena rata — provjeri da nije već u uplate mapi
-            const uplataPostoji = item.uplate && item.uplate[currentMonthKey] && item.uplate[currentMonthKey] > 0;
-            if (!uplataPostoji) {
-              expectedThisMonth += rata.iznos || 0;
-            }
-          }
-        }
+        if (mk === currentMonthKey) expectedThisMonth += rata.iznos || 0;
       });
     }
   };
@@ -5424,20 +5411,12 @@ function renderKalendar(c) {
     if (item.plan_otplate && item.plan_otplate.rate) {
       item.plan_otplate.rate.forEach(rata => {
         if (!rata.datum) return;
+        // Koristimo string substring da izbegnemo timezone bug
         const mk = rata.datum.substring(0, 7);
         if (!byMonth[mk]) byMonth[mk] = { actualPaid: 0, expected: 0, entries: [] };
         if (rata.isplacena) {
-          // Provjeri da li je uplata vec u item.uplate mapi da ne broji dvostruko
-          const uplataPostoji = item.uplate && item.uplate[mk] && item.uplate[mk] > 0;
-          if (!uplataPostoji) {
-            // Isplacena rata ali nema uplate u mapi (npr. kapara evidentirana samo u planu)
-            byMonth[mk].actualPaid += rata.iznos || 0;
-            byMonth[mk].entries.push({
-              type: 'paid',
-              item: label, customer, amount: rata.iznos || 0,
-              source: rata.opis || 'Plan otplate'
-            });
-          }
+          // isplacena rata je vec u item.uplate mapi — ne broji dvostruko
+          // samo je prikazujemo kao planned-paid za informaciju
         } else {
           byMonth[mk].expected += rata.iznos || 0;
           byMonth[mk].entries.push({
@@ -5716,17 +5695,11 @@ function showMonthDetails(monthKey) {
     if (item.plan_otplate && item.plan_otplate.rate) {
       item.plan_otplate.rate.forEach(rata => {
         if (!rata.datum) return;
+        // Koristimo string substring da izbegnemo timezone bug
         const k = rata.datum.substring(0, 7);
         if (k === monthKey) {
           if (rata.isplacena) {
-            // Provjeri da li je uplata vec u item.uplate mapi da ne broji dvostruko
-            const uplataPostoji = item.uplate && item.uplate[monthKey] && item.uplate[monthKey] > 0;
-            if (!uplataPostoji) {
-              paidEntries.push({
-                label, customer, amount: rata.iznos || 0,
-                source: rata.opis || 'Plan otplate', onclickJs
-              });
-            }
+            // isplacena rata je vec u item.uplate mapi — ne broji dvostruko
           } else {
             plannedEntries.push({
               label, customer, amount: rata.iznos || 0,
@@ -6198,8 +6171,7 @@ function renderUpcomingRatesPanel() {
   const months = ['Januar','Februar','Mart','April','Maj','Jun','Jul','Avgust','Septembar','Oktobar','Novembar','Decembar'];
   
   DATA.apartments.forEach(a => {
-    const imaAktivanPlan = a.plan_otplate && a.plan_otplate.rate && a.plan_otplate.rate.length > 0;
-    if ((!a.prodat && !imaAktivanPlan) || a.vlasnik_parcele) return;
+    if (!a.prodat || a.vlasnik_parcele) return;
     if (a.planirane_rate) {
       Object.entries(a.planirane_rate).forEach(([mk, amt]) => {
         if (mk >= nowKey && mk <= in7Key) {
