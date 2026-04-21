@@ -1,5 +1,5 @@
 // Service Worker - Evidencija Stanova
-const CACHE = 'investprom-v7';
+const CACHE = 'investprom-v8';
 const ASSETS = [
   './',
   './index.html',
