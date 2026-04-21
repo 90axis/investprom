@@ -5447,8 +5447,8 @@ function renderKalendar(c) {
   });
   
   // Ensure all months from 2024 to 2030 exist so calendar is complete
-  const startYear = 2024;
-  const endYear = 2030;
+  const startYear = 2025;
+  const endYear = 2029;
   for (let y = startYear; y <= endYear; y++) {
     for (let m = 1; m <= 12; m++) {
       const key = `${y}-${String(m).padStart(2,'0')}`;
