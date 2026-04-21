@@ -3637,14 +3637,18 @@ function syncPlanToPayments(item) {
   let planPaidSum = 0;
   item.plan_otplate.rate.forEach((r, idx) => {
     if (r.isplacena && r.iznos > 0) {
-      planPaidSum += r.iznos;
-      // Add as synthetic uplate for this month (use date if available)
-      const d = r.datum ? new Date(r.datum) : new Date();
-      const mk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      // If there's already an uplate in this month, add on top
-      const syntheticKey = `${mk}-plan${idx}`;
-      uplate[syntheticKey] = r.iznos;
-      uplateDates[syntheticKey] = r.datum || `${mk}-15`;
+      // Provjeri da li ta uplata vec postoji u uplate mapi za taj mesec
+      // da ne bi doslo do duplog brojanja
+      const mk = r.datum ? r.datum.substring(0, 7) : null;
+      const uplataVecPostoji = mk && Object.entries(uplate).some(([k, v]) => 
+        k.startsWith(mk) && !k.includes('-plan') && Math.abs(v - r.iznos) < 1
+      );
+      if (!uplataVecPostoji) {
+        planPaidSum += r.iznos;
+        const syntheticKey = `${mk || 'unknown'}-plan${idx}`;
+        uplate[syntheticKey] = r.iznos;
+        uplateDates[syntheticKey] = r.datum || `${mk}-15`;
+      }
     }
   });
   
@@ -6259,64 +6263,69 @@ function renderUpcomingRatesPanel() {
 
 function renderMonthlySalesChart() {
   const now = new Date();
-  const year = now.getFullYear();
-  const months = ['Jan','Feb','Mar','Apr','Maj','Jun','Jul','Avg','Sep','Okt','Nov','Dec'];
-  
-  // Count sales per month (by datum_prodaje)
-  const salesByMonth = new Array(12).fill(0);
-  const revenueByMonth = new Array(12).fill(0);
-  
+  const monthNames = ['Jan','Feb','Mar','Apr','Maj','Jun','Jul','Avg','Sep','Okt','Nov','Dec'];
+
+  // Generiši zadnjih 12 mjeseci zaključno sa trenutnim
+  const last12 = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    last12.push({
+      key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,
+      label: monthNames[d.getMonth()],
+      year: d.getFullYear(),
+      isCurrent: i === 0,
+      sales: 0,
+      revenue: 0
+    });
+  }
+
   const allItems = [
     ...DATA.apartments.map(a => ({ datum: a.datum_prodaje, val: a.vrednost_sa_pdv })),
     ...(DATA.garages || []).map(g => ({ datum: g.datum_prodaje, val: g.vrednost })),
     ...(DATA.ostave || []).map(o => ({ datum: o.datum_prodaje, val: o.vrednost }))
   ];
-  
+
   allItems.forEach(item => {
     if (!item.datum) return;
-    const d = new Date(item.datum);
-    if (d.getFullYear() !== year) return;
-    salesByMonth[d.getMonth()]++;
-    revenueByMonth[d.getMonth()] += item.val || 0;
+    const mk = item.datum.substring(0, 7);
+    const slot = last12.find(s => s.key === mk);
+    if (slot) {
+      slot.sales++;
+      slot.revenue += item.val || 0;
+    }
   });
-  
-  const totalSalesYear = salesByMonth.reduce((s,v) => s+v, 0);
-  const totalRevenueYear = revenueByMonth.reduce((s,v) => s+v, 0);
-  
-  if (totalSalesYear === 0) return ''; // Don't show empty chart
-  
-  const maxSales = Math.max(...salesByMonth, 1);
-  const maxRevenue = Math.max(...revenueByMonth, 1);
-  const currentMonth = now.getMonth();
-  
+
+  const totalSales = last12.reduce((s,m) => s+m.sales, 0);
+  const totalRevenue = last12.reduce((s,m) => s+m.revenue, 0);
+
+  if (totalSales === 0) return '';
+
+  const maxSales = Math.max(...last12.map(m => m.sales), 1);
+
   return `
     <div class="panel" style="margin-bottom:20px;">
       <div class="panel-header">
-        <div class="panel-title">🏷️ Prodaja po mesecima ${year}</div>
-        <div style="font-size:12px; color:var(--text-dim);">${totalSalesYear} prodaja · ${fmtEur(totalRevenueYear)}</div>
+        <div class="panel-title">🏷️ Prodaja — zadnjih 12 meseci</div>
+        <div style="font-size:12px; color:var(--text-dim);">${totalSales} prodaja · ${fmtEur(totalRevenue)}</div>
       </div>
       <div style="padding:16px;">
         <div style="display:grid; grid-template-columns:repeat(12,1fr); gap:4px; align-items:end; height:110px; margin-bottom:8px;">
-          ${months.map((m, i) => {
-            const sales = salesByMonth[i];
-            const rev = revenueByMonth[i];
-            const hPct = Math.round((sales / maxSales) * 100);
-            const isCurrent = i === currentMonth;
-            const isToday = isCurrent;
+          ${last12.map(m => {
+            const hPct = Math.round((m.sales / maxSales) * 100);
             return `
-              <div style="display:flex; flex-direction:column; align-items:center; gap:3px; height:100%;" title="${m}: ${sales} prodaja · ${fmtEur(rev)}">
+              <div style="display:flex; flex-direction:column; align-items:center; gap:3px; height:100%;" title="${m.label} ${m.year}: ${m.sales} prodaja · ${fmtEur(m.revenue)}">
                 <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end; width:100%;">
-                  ${sales > 0 ? '<div style="font-size:9px; font-weight:700; text-align:center; color:' + (isCurrent ? 'var(--accent)' : 'var(--success)') + '; margin-bottom:2px;">' + sales + '</div>' : ''}
-                  <div style="width:100%; height:${hPct}%; min-height:${sales>0?'4px':'0'}; background:${isCurrent ? 'linear-gradient(to top, var(--accent), #e3b584)' : 'linear-gradient(to top, #22c55e, #4ade80)'}; border-radius:3px 3px 0 0; transition:height 0.3s;"></div>
+                  ${m.sales > 0 ? `<div style="font-size:9px; font-weight:700; text-align:center; color:${m.isCurrent ? 'var(--accent)' : 'var(--success)'}; margin-bottom:2px;">${m.sales}</div>` : ''}
+                  <div style="width:100%; height:${hPct}%; min-height:${m.sales>0?'4px':'0'}; background:${m.isCurrent ? 'linear-gradient(to top, var(--accent), #e3b584)' : 'linear-gradient(to top, #22c55e, #4ade80)'}; border-radius:3px 3px 0 0; transition:height 0.3s;"></div>
                 </div>
-                <div style="font-size:9px; color:${isCurrent ? 'var(--accent)' : 'var(--text-dim)'}; font-weight:${isCurrent ? '700' : '400'};">${m}</div>
+                <div style="font-size:9px; color:${m.isCurrent ? 'var(--accent)' : 'var(--text-dim)'}; font-weight:${m.isCurrent ? '700' : '400'};">${m.label}</div>
               </div>
             `;
           }).join('')}
         </div>
         <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:11px; color:var(--text-dim);">
           <span>🟢 Realizovane prodaje po mesecima</span>
-          <span>Trenutni mesec: <strong style="color:var(--accent);">${fmtEur(revenueByMonth[currentMonth])}</strong></span>
+          <span>Ovaj mesec: <strong style="color:var(--accent);">${fmtEur(last12[11].revenue)}</strong></span>
         </div>
       </div>
     </div>
