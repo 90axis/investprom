@@ -4931,7 +4931,7 @@ function showSellConfirm(type, lamela, idOrBroj) {
         
         <div class="form-field">
           <label>Kapara (€, opciono)</label>
-          <input id="sellKapara" type="number" step="1" placeholder="0">
+          <input id="sellKapara" type="number" step="1" placeholder="0" min="0" value="0">
         </div>
         
         <div class="form-field full">
@@ -5007,11 +5007,15 @@ function updateSellTotal() {
   const vredEl = document.getElementById('sellVrednost');
   if (!cenaEl || !vredEl) return;
   const cena = parseFloat(cenaEl.value) || 0;
-  // Find povrsina from current item
   const povrsinaEl = document.getElementById('sellPovrsina');
   const povrsina = povrsinaEl ? parseFloat(povrsinaEl.value) || 0 : window._sellPovrsina || 0;
   if (cena > 0 && povrsina > 0) {
-    vredEl.value = (cena * povrsina).toFixed(2);
+    const nova = cena * povrsina;
+    vredEl.value = nova.toFixed(2);
+    // Azuriraj _sellVrednost da plan summary koristi novu cijenu
+    window._sellVrednost = nova;
+    updateSellPlanPreview();
+    updateSellPlanSummary();
   }
 }
 
@@ -5032,7 +5036,8 @@ function toggleSellPlanDetails() {
 function updateSellPlanPreview() {
   const prev = document.getElementById('sellPlanPreview');
   if (!prev) return;
-  const vrednost = window._sellVrednost || 0;
+  // Uvijek citaj aktuelnu vrijednost iz inputa
+  const vrednost = parseFloat(document.getElementById('sellVrednost')?.value) || window._sellVrednost || 0;
   const kaparaPct = parseFloat(document.getElementById('sellPlanKaparaPct')?.value) || 20;
   const brojRata = parseInt(document.getElementById('sellPlanBrojRata')?.value) || 12;
   const kaparaIznos = Math.round(vrednost * kaparaPct / 100);
@@ -5065,7 +5070,8 @@ function updateSellPlanSummary() {
     const iznos = parseFloat(row.children[2].value) || 0;
     total += iznos;
   });
-  const vrednost = window._sellVrednost || 0;
+  // Uvijek citaj aktuelnu vrijednost iz inputa
+  const vrednost = parseFloat(document.getElementById('sellVrednost')?.value) || window._sellVrednost || 0;
   const diff = vrednost - total;
   summary.innerHTML = `Ukupno u planu: <strong>${fmtEur(total)}</strong> · Razlika: <strong style="color:${Math.abs(diff) > 1 ? 'var(--danger)' : 'var(--success)'}">${fmtEur(diff)}</strong>`;
 }
@@ -5090,7 +5096,7 @@ function confirmSell(type, lamela, idOrBroj) {
     return;
   }
   const datum = document.getElementById('sellDatum').value;
-  const kapara = parseFloat(document.getElementById('sellKapara').value) || 0;
+  const kapara = Math.max(0, parseFloat(document.getElementById('sellKapara').value) || 0);
   
   // Ugovor: select (none/predugovor/ugovor) or old checkbox fallback
   const ugovorSel = document.getElementById('sellUgovor');
