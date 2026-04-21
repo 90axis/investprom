@@ -2080,15 +2080,10 @@ async function unsellApartment(lamela, stan) {
   if (!a) return;
 
   const aptId = a._id;
-
-  // Obriši iz Supabase
   const sb = getSupabase();
   if (sb && _isOnline && aptId) {
-    // Obriši uplate
     await sb.from('apartment_payments').delete().eq('apartment_id', aptId);
-    // Obriši priznanice
     await sb.from('receipts').delete().eq('item_id', aptId);
-    // Resetuj stan u Supabase
     await sb.from('apartments').update({
       ime: '',
       prodat: false,
@@ -2096,14 +2091,12 @@ async function unsellApartment(lamela, stan) {
       predugovor: false,
       isplaceno: 0,
       preostalo: a.vrednost_sa_pdv,
-      uplate: {},
       napomena: '',
       plan_otplate: null,
       datum_prodaje: null
     }).eq('id', aptId);
   }
 
-  // Resetuj lokalno
   a.ime = '';
   a.prodat = false;
   a.ugovor = false;
@@ -2114,11 +2107,9 @@ async function unsellApartment(lamela, stan) {
   a.napomena = '';
   a.plan_otplate = null;
   a.datum_prodaje = null;
-
-  // Obriši priznanice iz lokalnog DATA
   DATA.receipts = (DATA.receipts || []).filter(r => r.itemId !== aptId);
 
-  logActivity('PONIŠTENA_PRODAJA', `Stan ${lamela}-${stan} — prodaja poništena, uplate obrisane`);
+  logActivity('PONIŠTENA_PRODAJA', `Stan ${lamela}-${stan} — prodaja poništena`);
   saveToCache();
   closeModal();
   renderView();
@@ -2666,9 +2657,9 @@ function saveItem(type, idOrIdx, isNew) {
   showToast('Sačuvano', 'success');
 }
 
-async function unsellItem(type, idOrIdx) {
+function unsellItem(type, idOrIdx) {
   const label = type === 'garage' ? 'garaže' : 'ostave';
-  if (!confirm(`Poništiti prodaju ${label}? Podaci o kupcu i sve uplate će biti obrisani, ali stavka ostaje u evidenciji kao slobodna.`)) return;
+  if (!confirm(`Poništiti prodaju ${label}? Podaci o kupcu će biti obrisani, ali stavka ostaje u evidenciji kao slobodna.`)) return;
   
   let item;
   if (type === 'garage') {
@@ -2677,43 +2668,14 @@ async function unsellItem(type, idOrIdx) {
     item = DATA.ostave[idOrIdx];
   }
   if (!item) return;
-
-  const itemId = item._id;
-  const table = type === 'garage' ? 'garage_payments' : null;
-  const fkField = type === 'garage' ? 'garage_id' : null;
-  const sbTable = type === 'garage' ? 'garages' : 'ostave';
-
-  // Obriši iz Supabase
-  const sb = getSupabase();
-  if (sb && _isOnline && itemId) {
-    // Obriši uplate (garaže imaju garage_payments)
-    if (table) await sb.from(table).delete().eq(fkField, itemId);
-    // Obriši priznanice
-    await sb.from('receipts').delete().eq('item_id', itemId);
-    // Resetuj u Supabase
-    await sb.from(sbTable).update({
-      ime: '',
-      prodat: false,
-      naplaceno: 0,
-      preostalo: item.vrednost,
-      plan_otplate: null,
-      datum_prodaje: null
-    }).eq('id', itemId);
-  }
-
-  // Resetuj lokalno
+  
   item.ime = '';
   item.prodat = false;
   item.naplaceno = 0;
   item.preostalo = item.vrednost;
   item.uplate = {};
   item.plan_otplate = null;
-  item.datum_prodaje = null;
-
-  // Obriši priznanice iz lokalnog DATA
-  DATA.receipts = (DATA.receipts || []).filter(r => r.itemId !== itemId);
-
-  logActivity('PONIŠTENA_PRODAJA', `${type === 'garage' ? 'Garaža' : 'Ostava'} ${item.broj || ''} — prodaja poništena`);
+  
   saveToCache();
   closeModal();
   renderView();
