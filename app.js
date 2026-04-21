@@ -122,7 +122,7 @@ async function syncFromSupabase() {
       napomena: a.napomena||'', ugovorena_cena: a.ugovorena_cena ? +a.ugovorena_cena : null,
       datum_prodaje: a.datum_prodaje||null, plan_otplate: a.plan_otplate||null,
       slike: a.slike||[], uplate: aptPayMap[a.id]||{},
-      uplate_dates: {}, planirane_rate: a.planirane_rate||{}
+      uplate_dates: {}, planirane_rate: {}
     }));
 
     DATA.garages = (gars.data||[]).map(g => ({
@@ -1121,10 +1121,10 @@ function renderDashboard(c) {
         <div class="stat-value accent">${fmtEur(totalPaid)}</div>
         <div class="stat-sub">${totalRec} priznanica izdato</div>
       </div>
-      <div class="stat-card" style="border-color:var(--warning, #f0a500);">
+      <div class="stat-card" style="border-color:var(--warning, #f0a500); cursor:pointer;" onclick="showExpectedThisMonth()" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
         <div class="stat-label">Očekivane uplate (${now.toLocaleString('sr-Latn', {month:'long'})})</div>
         <div class="stat-value" style="color:var(--warning, #f0a500);">${fmtEur(expectedThisMonth)}</div>
-        <div class="stat-sub">planirane rate za tekući mesec</div>
+        <div class="stat-sub">planirane rate za tekući mesec · klikni za detalje</div>
       </div>
     </div>
     
@@ -6382,6 +6382,112 @@ function renderActivity(c) {
       }).join('')}
     </div>
   `;
+}
+
+
+// ============================================
+// MODAL: Očekivane uplate tekućeg meseca
+// ============================================
+function showExpectedThisMonth() {
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthName = now.toLocaleString('sr-Latn', {month:'long', year:'numeric'});
+  
+  const entries = [];
+  
+  const collectItem = (item, label, customer, onclickJs) => {
+    if (item.vlasnik_parcele) return;
+    // planirane_rate
+    if (item.planirane_rate && item.planirane_rate[currentMonthKey]) {
+      entries.push({
+        label, customer, amount: item.planirane_rate[currentMonthKey],
+        source: 'Plan', onclickJs
+      });
+    }
+    // plan_otplate - samo neplaćene
+    if (item.plan_otplate && item.plan_otplate.rate) {
+      item.plan_otplate.rate.forEach(rata => {
+        if (!rata.datum || rata.isplacena) return;
+        if (rata.datum.substring(0,7) === currentMonthKey) {
+          entries.push({
+            label, customer, amount: rata.iznos || 0,
+            source: rata.opis || 'Plan otplate', onclickJs
+          });
+        }
+      });
+    }
+  };
+  
+  DATA.apartments.forEach(a => {
+    const imaAktivanPlan = a.plan_otplate && a.plan_otplate.rate && a.plan_otplate.rate.length > 0;
+    if (!a.prodat && !imaAktivanPlan) return;
+    collectItem(a, `Stan ${a.lamela}-${a.stan}`, a.ime || '—',
+      `openApartment('${a.lamela}', ${a.stan})`);
+  });
+  (DATA.garages || []).forEach(g => {
+    if (!g.prodat) return;
+    collectItem(g, `Garaža G-${g.broj}`, g.ime || '—',
+      `openGarage(${g.broj})`);
+  });
+  (DATA.ostave || []).forEach((o, idx) => {
+    if (!o.prodat) return;
+    collectItem(o, `Ostava ${o.broj || ''}`, o.ime || '—',
+      `openOstava(${idx})`);
+  });
+  
+  entries.sort((a,b) => b.amount - a.amount);
+  const total = entries.reduce((s,e) => s + e.amount, 0);
+  
+  const m = document.getElementById('modalContent');
+  m.style.maxWidth = '700px';
+  m.innerHTML = `
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Očekivane uplate</div>
+        <div class="modal-title-sub">${monthName} · ${entries.length} rata</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.4); padding:14px 16px; border-radius:10px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:13px; color:var(--text-dim);">Ukupno očekivano</div>
+        <div style="font-size:22px; font-weight:700; color:var(--warning);">${fmtEur(total)}</div>
+      </div>
+      ${entries.length === 0 ? '<div class="empty-state" style="padding:40px;">Nema planiranih rata za ovaj mesec</div>' : `
+        <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+          <table class="data-table" style="background:transparent; margin:0;">
+            <thead>
+              <tr>
+                <th>Stavka</th>
+                <th>Kupac</th>
+                <th>Opis</th>
+                <th class="num">Iznos</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${entries.map(e => `
+                <tr onclick="closeModal(); setTimeout(() => ${e.onclickJs}, 100);" style="cursor:pointer;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+                  <td><strong style="color:var(--accent);">${e.label}</strong></td>
+                  <td>${e.customer}</td>
+                  <td style="font-size:12px; color:var(--text-dim);">${e.source}</td>
+                  <td class="num" style="color:var(--warning); font-weight:600;">${fmtEur(e.amount)}</td>
+                </tr>
+              `).join('')}
+              <tr style="background:var(--surface-3);">
+                <td colspan="3" style="font-weight:700;">UKUPNO</td>
+                <td class="num" style="color:var(--warning); font-weight:700; font-size:15px;">${fmtEur(total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Zatvori</button>
+      <button class="btn btn-ghost" onclick="closeModal(); switchView('kalendar')">Kalendar →</button>
+    </div>
+  `;
+  document.getElementById('modal').classList.add('active');
 }
 
 init();
