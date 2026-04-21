@@ -1,3 +1,57 @@
-git add .github/workflows/deploy.yml
-git commit -m "Auto bump cache verzija pri svakom pushu"
-git push origin main
+name: Deploy Invest Prom na GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  bump-cache-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Preuzmi kod
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Automatski povećaj cache verziju u sw.js
+        run: |
+          CURRENT=$(grep -oP "investprom-v\K[0-9]+" sw.js)
+          NEW=$((CURRENT + 1))
+          echo "Cache verzija: v$CURRENT → v$NEW"
+          sed -i "s/investprom-v${CURRENT}/investprom-v${NEW}/" sw.js
+
+      - name: Commit nove cache verzije
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sw.js
+          git diff --staged --quiet || git commit -m "Auto: bump cache verzija [skip ci]"
+          git push
+
+      - name: Podesi GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Uploaduj fajlove
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploji na GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
