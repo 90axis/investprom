@@ -4946,22 +4946,36 @@ function showSellConfirm(type, lamela, idOrBroj) {
         ${type === 'apartment' ? `
         <div class="form-field full">
           <label>Plan otplate</label>
-          <select id="sellPlan" style="width:100%;">
+          <select id="sellPlan" style="width:100%;" onchange="toggleSellPlanDetails()">
             <option value="none">Ne - bez plana</option>
-            <option value="standard">Standardni (kapara + rate)</option>
+            <option value="standard">Automatski (kapara % + ravnomjerne rate)</option>
+            <option value="custom">Ručno - unesu rate jednu po jednu</option>
           </select>
         </div>
+
+        <!-- Automatski plan -->
         <div id="sellPlanDetails" style="display:none; grid-column:1/-1;">
           <div class="form-grid">
             <div class="form-field">
               <label>Kapara %</label>
-              <input id="sellPlanKaparaPct" type="number" value="20" min="0" max="100">
+              <input id="sellPlanKaparaPct" type="number" value="20" min="0" max="100" oninput="updateSellPlanPreview()">
             </div>
             <div class="form-field">
               <label>Broj rata</label>
-              <input id="sellPlanBrojRata" type="number" value="12" min="1" max="120">
+              <input id="sellPlanBrojRata" type="number" value="12" min="1" max="120" oninput="updateSellPlanPreview()">
             </div>
+            <div class="form-field full" id="sellPlanPreview" style="font-size:12px; color:var(--text-dim); padding:8px; background:var(--surface-2); border-radius:6px;"></div>
           </div>
+        </div>
+
+        <!-- Ručni plan -->
+        <div id="sellPlanCustom" style="display:none; grid-column:1/-1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label style="font-size:13px; font-weight:600;">Rate plana otplate</label>
+            <button type="button" class="btn btn-secondary" onclick="addSellPlanRate()" style="font-size:12px; padding:4px 10px;">+ Dodaj ratu</button>
+          </div>
+          <div id="sellPlanRateList" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+          <div id="sellPlanSummary" style="font-size:12px; color:var(--text-dim); padding:8px; background:var(--surface-2); border-radius:6px;"></div>
         </div>
         ` : ''}
       </div>
@@ -4974,17 +4988,13 @@ function showSellConfirm(type, lamela, idOrBroj) {
     </div>
   `;
   
-  // Store povrsina for auto-calc
+  // Store povrsina i vrednost za auto-calc
   window._sellPovrsina = povrsina;
+  window._sellVrednost = value || 0;
   
   // Wire up plan toggle
-  const planSel = document.getElementById('sellPlan');
-  if (planSel) {
-    planSel.addEventListener('change', () => {
-      const d = document.getElementById('sellPlanDetails');
-      if (d) d.style.display = planSel.value !== 'none' ? 'contents' : 'none';
-    });
-  }
+  toggleSellPlanDetails();
+  updateSellPlanPreview();
   
   setTimeout(() => {
     const el = document.getElementById('sellIme');
@@ -5003,6 +5013,74 @@ function updateSellTotal() {
   if (cena > 0 && povrsina > 0) {
     vredEl.value = (cena * povrsina).toFixed(2);
   }
+}
+
+
+// ============================================
+// SELL DIALOG — Plan otplate helpers
+// ============================================
+function toggleSellPlanDetails() {
+  const val = document.getElementById('sellPlan')?.value;
+  const std = document.getElementById('sellPlanDetails');
+  const custom = document.getElementById('sellPlanCustom');
+  if (std) std.style.display = val === 'standard' ? 'block' : 'none';
+  if (custom) custom.style.display = val === 'custom' ? 'block' : 'none';
+  if (val === 'custom') updateSellPlanSummary();
+  if (val === 'standard') updateSellPlanPreview();
+}
+
+function updateSellPlanPreview() {
+  const prev = document.getElementById('sellPlanPreview');
+  if (!prev) return;
+  const vrednost = window._sellVrednost || 0;
+  const kaparaPct = parseFloat(document.getElementById('sellPlanKaparaPct')?.value) || 20;
+  const brojRata = parseInt(document.getElementById('sellPlanBrojRata')?.value) || 12;
+  const kaparaIznos = Math.round(vrednost * kaparaPct / 100);
+  const rataIznos = Math.round((vrednost - kaparaIznos) / brojRata);
+  prev.innerHTML = `Kapara: <strong>${fmtEur(kaparaIznos)}</strong> · ${brojRata} rata po <strong>${fmtEur(rataIznos)}</strong> · Ukupno: <strong>${fmtEur(kaparaIznos + rataIznos * brojRata)}</strong>`;
+}
+
+function addSellPlanRate() {
+  const list = document.getElementById('sellPlanRateList');
+  if (!list) return;
+  const idx = list.children.length;
+  const div = document.createElement('div');
+  div.style.cssText = 'display:grid; grid-template-columns:1fr auto auto auto; gap:6px; align-items:center;';
+  div.innerHTML = `
+    <input type="text" placeholder="Opis (npr. Kapara)" value="${idx === 0 ? 'Kapara' : 'Rata ' + idx}" style="font-size:13px;">
+    <input type="date" style="font-size:13px; width:140px;">
+    <input type="number" placeholder="Iznos €" step="1" style="font-size:13px; width:110px;" oninput="updateSellPlanSummary()">
+    <button type="button" onclick="this.parentElement.remove(); updateSellPlanSummary();" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:18px; padding:0 4px;">×</button>
+  `;
+  list.appendChild(div);
+  updateSellPlanSummary();
+}
+
+function updateSellPlanSummary() {
+  const summary = document.getElementById('sellPlanSummary');
+  const list = document.getElementById('sellPlanRateList');
+  if (!summary || !list) return;
+  let total = 0;
+  Array.from(list.children).forEach(row => {
+    const iznos = parseFloat(row.children[2].value) || 0;
+    total += iznos;
+  });
+  const vrednost = window._sellVrednost || 0;
+  const diff = vrednost - total;
+  summary.innerHTML = `Ukupno u planu: <strong>${fmtEur(total)}</strong> · Razlika: <strong style="color:${Math.abs(diff) > 1 ? 'var(--danger)' : 'var(--success)'}">${fmtEur(diff)}</strong>`;
+}
+
+function getSellCustomPlan() {
+  const list = document.getElementById('sellPlanRateList');
+  if (!list) return null;
+  const rate = [];
+  Array.from(list.children).forEach(row => {
+    const opis = row.children[0].value.trim() || 'Rata';
+    const datum = row.children[1].value || '';
+    const iznos = parseFloat(row.children[2].value) || 0;
+    if (iznos > 0) rate.push({ opis, datum, iznos, isplacena: false });
+  });
+  return rate.length > 0 ? { rate, kapara_pct: 0 } : null;
 }
 
 function confirmSell(type, lamela, idOrBroj) {
@@ -5074,13 +5152,10 @@ function confirmSell(type, lamela, idOrBroj) {
       const vrednost = item.vrednost_sa_pdv || 0;
       const kaparaIznos = Math.round(vrednost * kaparaPct / 100);
       const rataIznos = Math.round((vrednost - kaparaIznos) / brojRata);
-      
       const rate = [];
-      // Add kapara as first rate
       if (kaparaIznos > 0 && kapara === 0) {
         rate.push({ opis: 'Kapara', iznos: kaparaIznos, datum: datum, isplacena: false });
       }
-      // Add monthly rates starting next month
       const startDate = new Date(datum);
       startDate.setMonth(startDate.getMonth() + 1);
       for (let i = 0; i < brojRata; i++) {
@@ -5090,6 +5165,10 @@ function confirmSell(type, lamela, idOrBroj) {
         rate.push({ opis: `Rata ${i+1}/${brojRata}`, iznos: rataIznos, datum: dateStr, isplacena: false });
       }
       item.plan_otplate = { kapara_pct: kaparaPct, rate };
+    } else if (planSel && planSel.value === 'custom') {
+      // Rucni plan — uzmi rate koje je korisnik unio
+      const customPlan = getSellCustomPlan();
+      if (customPlan) item.plan_otplate = customPlan;
     }
   } else {
     // garage / ostava
