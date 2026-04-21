@@ -1,5 +1,5 @@
 // Service Worker - Evidencija Stanova
-const CACHE = 'investprom-v12';
+const CACHE = 'investprom-v13';
 
 // Fajlovi koji se uvijek preuzimaju sa mreze (ne iz cache-a)
 const NETWORK_FIRST = ['app.js', 'data.json'];
