@@ -113,9 +113,13 @@ async function syncFromSupabase() {
     });
 
     DATA.apartments = (apts.data||[]).map(a => {
-      // Uvijek racunaj isplaceno iz apartment_payments tabele, ne iz kolone
       const uplate = aptPayMap[a.id] || {};
-      const isplaceno = Object.values(uplate).reduce((s, v) => s + v, 0);
+      // Suma novih uplata iz apartment_payments tabele
+      const noviUplataSum = Object.values(uplate).reduce((s, v) => s + v, 0);
+      // Stare uplate iz Excela sacuvane u apartments.isplaceno
+      const isplaceno_base = +a.isplaceno || 0;
+      // Uzimamo max — cuvamo stare Excel uplate, ali ako su nove vece uzimamo nove
+      const isplaceno = Math.max(isplaceno_base, noviUplataSum);
       const vrednost_sa_pdv = +a.vrednost_sa_pdv || 0;
       return {
         _id: a.id, lamela: a.lamela, stan: a.stan, sprat: a.sprat||'',
@@ -5629,7 +5633,7 @@ function renderMonthCard(key, monthData, isHighlight) {
             <span style="color:var(--success);">${fmtEur(paid)}</span>
             <span style="color:var(--accent);">${fmtEur(expected)}</span>
           </div>
-          <div style="font-size:9px; color:#60a5fa; margin-top:2px;">⚡ sadrži novu prodaju</div>
+          <div style="font-size:9px; color:#60a5fa; margin-top:2px;">⚡ sadrži neočekivane uplate</div>
         ` : hasUnexpected ? `
           <!-- Only unexpected -->
           <div style="height:6px; background:var(--surface-3); border-radius:3px; overflow:hidden; margin-bottom:4px;">
@@ -5637,7 +5641,7 @@ function renderMonthCard(key, monthData, isHighlight) {
           </div>
           <div style="display:flex; justify-content:space-between; font-size:10px;">
             <span style="color:#60a5fa;">⚡ ${fmtEur(paid)}</span>
-            <span style="color:var(--text-dim); font-style:italic;">nova prodaja</span>
+            <span style="color:var(--text-dim); font-style:italic;">neočekivano</span>
           </div>
         ` : `
           <!-- Only planned -->
