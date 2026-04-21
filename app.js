@@ -122,7 +122,7 @@ async function syncFromSupabase() {
       napomena: a.napomena||'', ugovorena_cena: a.ugovorena_cena ? +a.ugovorena_cena : null,
       datum_prodaje: a.datum_prodaje||null, plan_otplate: a.plan_otplate||null,
       slike: a.slike||[], uplate: aptPayMap[a.id]||{},
-      uplate_dates: {}, planirane_rate: {}
+      uplate_dates: {}, planirane_rate: a.planirane_rate||{}
     }));
 
     DATA.garages = (gars.data||[]).map(g => ({
