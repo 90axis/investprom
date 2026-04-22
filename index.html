@@ -1,14 +1,28 @@
 <!DOCTYPE html>
 <html lang="sr">
 <head>
+<script>
+  // Postavlja temu PRIJE ucitavanja CSS-a
+  (function() {
+    var saved = localStorage.getItem('investprom_theme');
+    document.documentElement.setAttribute('data-theme', saved === 'light' ? 'light' : 'dark');
+  })();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1a2332">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="dark light">
+<meta name="supported-color-schemes" content="dark light">
 <style>
-  /* Forsira aplikaciju da uvijek koristi vlastite boje, ignorira sistem temu */
-  :root { color-scheme: only light; }
-  [data-theme="light"] { color-scheme: only light; }
+  /* KRITICNO: Onemogucuje Android WebView auto-dark */
+  :root {
+    color-scheme: dark !important;
+    forced-color-adjust: none !important;
+  }
+  html, body {
+    -webkit-text-size-adjust: none !important;
+    text-size-adjust: none !important;
+  }
 </style>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -37,23 +51,27 @@
   --chart-expected: #ff9100;
 }
 
-/* Eksplicitna tamna tema */
+/* Eksplicitna tamna tema - override Android WebView */
+[data-theme="dark"],
+[data-theme="dark"] * {
+  forced-color-adjust: none;
+}
 [data-theme="dark"] {
-  --bg: #0f1419;
-  --surface: #1a2332;
-  --surface-2: #243447;
-  --surface-3: #2d4057;
-  --accent: #d4a574;
-  --accent-hover: #e3b584;
-  --text: #e8ecf1;
-  --text-dim: #8a97a8;
-  --success: #00e676;
-  --danger: #ff5252;
-  --warning: #ffab40;
-  --border: rgba(255,255,255,0.08);
-  --chart-paid: #00e676;
-  --chart-expected: #ff9100;
-  color-scheme: dark;
+  --bg: #0f1419 !important;
+  --surface: #1a2332 !important;
+  --surface-2: #243447 !important;
+  --surface-3: #2d4057 !important;
+  --accent: #d4a574 !important;
+  --accent-hover: #e3b584 !important;
+  --text: #e8ecf1 !important;
+  --text-dim: #8a97a8 !important;
+  --success: #00e676 !important;
+  --danger: #ff5252 !important;
+  --warning: #ffab40 !important;
+  --border: rgba(255,255,255,0.08) !important;
+  color-scheme: dark !important;
+  background-color: #0f1419 !important;
+  color: #e8ecf1 !important;
 }
 
 /* Bijela tema */
@@ -1418,6 +1436,18 @@ document.addEventListener('keydown', function(e) {
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<script>
+  // Onemogucuje Android WebView auto-dark mode
+  if (window.matchMedia) {
+    // Postavi tamnu temu eksplicitno
+    document.documentElement.style.setProperty('background-color', '#0f1419', 'important');
+    document.documentElement.style.setProperty('color', '#e8ecf1', 'important');
+  }
+  // Android WebView forceDark API
+  if (typeof Android !== 'undefined' && Android.setForceDark) {
+    Android.setForceDark(false);
+  }
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="app.js"></script>
 </body>
