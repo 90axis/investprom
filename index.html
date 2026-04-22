@@ -2,22 +2,13 @@
 <html lang="sr">
 <head>
 <script>
-  // Postavlja temu PRIJE ucitavanja CSS-a da sprijeci flash
-  (function() {
-    var saved = localStorage.getItem('investprom_theme');
-    // Default je svjetla tema
-    document.documentElement.setAttribute('data-theme', saved === 'dark' ? 'dark' : 'light');
-  })();
+  // Fiksna neutralna tema uvijek
+  document.documentElement.setAttribute('data-theme', 'neutral');
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1a2332">
-<meta name="color-scheme" content="light dark">
-<style>
-  /* Forsira aplikaciju da uvijek koristi vlastite boje, ignorira sistem temu */
-  :root { color-scheme: only light; }
-  [data-theme="light"] { color-scheme: only light; }
-</style>
+<meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,63 +18,24 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* Tamna tema (default) */
+/* Jedina fiksna neutralna tema */
 :root {
-  --bg: #0f1419;
-  --surface: #1a2332;
-  --surface-2: #243447;
-  --surface-3: #2d4057;
+  --bg: #1e2a3a;
+  --surface: #253347;
+  --surface-2: #2d3e54;
+  --surface-3: #354861;
   --accent: #d4a574;
   --accent-hover: #e3b584;
-  --text: #e8ecf1;
-  --text-dim: #8a97a8;
+  --text: #f0f4f8;
+  --text-dim: #9aafc4;
   --success: #00e676;
   --danger: #ff5252;
   --warning: #ffab40;
-  --border: rgba(255,255,255,0.08);
+  --border: rgba(255,255,255,0.12);
   --chart-paid: #00e676;
   --chart-expected: #ff9100;
-}
-
-/* Eksplicitna tamna tema - override Android WebView */
-[data-theme="dark"],
-[data-theme="dark"] * {
+  color-scheme: dark;
   forced-color-adjust: none;
-}
-[data-theme="dark"] {
-  --bg: #0f1419 !important;
-  --surface: #1a2332 !important;
-  --surface-2: #243447 !important;
-  --surface-3: #2d4057 !important;
-  --accent: #d4a574 !important;
-  --accent-hover: #e3b584 !important;
-  --text: #e8ecf1 !important;
-  --text-dim: #8a97a8 !important;
-  --success: #00e676 !important;
-  --danger: #ff5252 !important;
-  --warning: #ffab40 !important;
-  --border: rgba(255,255,255,0.08) !important;
-  color-scheme: dark !important;
-  background-color: #0f1419 !important;
-  color: #e8ecf1 !important;
-}
-
-/* Bijela tema */
-[data-theme="light"] {
-  --bg: #ffffff;
-  --surface: #ffffff;
-  --surface-2: #f5f5f5;
-  --surface-3: #ebebeb;
-  --accent: #b8733e;
-  --accent-hover: #c4834e;
-  --text: #111111;
-  --text-dim: #555555;
-  --success: #16a34a;
-  --danger: #dc2626;
-  --warning: #d97706;
-  --border: rgba(0,0,0,0.12);
-  --chart-paid: #16a34a;
-  --chart-expected: #d97706;
 }
 
 html, body {

@@ -534,16 +534,6 @@ function openSettings() {
       </div>
       ` : ''}
       
-      <!-- Tema -->
-      <h3 style="font-size:13px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px;">🎨 Tema</h3>
-      <div style="background:var(--surface-2); padding:12px 14px; border-radius:8px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
-        <div>
-          <div style="font-weight:600;" id="themeLabel">${document.documentElement.dataset.theme === 'light' ? '☀️ Svetla tema' : '🌙 Tamna tema'}</div>
-          <div style="font-size:12px; color:var(--text-dim);">Tamna je bolja za rad, svetla za štampu</div>
-        </div>
-        <button class="btn btn-secondary" onclick="toggleTheme()" style="font-size:13px;">Promeni</button>
-      </div>
-      
       <!-- Backup/Restore -->
       <h3 style="font-size:13px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px;">💾 Backup i obnova</h3>
       <div style="background:var(--surface-2); padding:14px; border-radius:8px; margin-bottom:16px;">
@@ -636,15 +626,8 @@ function toggleTheme() {
 }
 
 function applyTheme() {
-  const saved = localStorage.getItem('investprom_theme');
-  if (saved === 'dark') {
-    document.documentElement.dataset.theme = 'dark';
-    document.documentElement.style.colorScheme = 'dark';
-  } else {
-    // Default je svjetla tema
-    document.documentElement.dataset.theme = 'light';
-    document.documentElement.style.colorScheme = 'light';
-  }
+  // Fiksna neutralna tema
+  document.documentElement.setAttribute('data-theme', 'neutral');
 }
 
 function backupData() {
