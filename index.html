@@ -2,27 +2,21 @@
 <html lang="sr">
 <head>
 <script>
-  // Postavlja temu PRIJE ucitavanja CSS-a
+  // Postavlja temu PRIJE ucitavanja CSS-a da sprijeci flash
   (function() {
     var saved = localStorage.getItem('investprom_theme');
-    document.documentElement.setAttribute('data-theme', saved === 'light' ? 'light' : 'dark');
+    // Default je svjetla tema
+    document.documentElement.setAttribute('data-theme', saved === 'dark' ? 'dark' : 'light');
   })();
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1a2332">
-<meta name="color-scheme" content="dark light">
-<meta name="supported-color-schemes" content="dark light">
+<meta name="color-scheme" content="light dark">
 <style>
-  /* KRITICNO: Onemogucuje Android WebView auto-dark */
-  :root {
-    color-scheme: dark !important;
-    forced-color-adjust: none !important;
-  }
-  html, body {
-    -webkit-text-size-adjust: none !important;
-    text-size-adjust: none !important;
-  }
+  /* Forsira aplikaciju da uvijek koristi vlastite boje, ignorira sistem temu */
+  :root { color-scheme: only light; }
+  [data-theme="light"] { color-scheme: only light; }
 </style>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1436,18 +1430,6 @@ document.addEventListener('keydown', function(e) {
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script>
-  // Onemogucuje Android WebView auto-dark mode
-  if (window.matchMedia) {
-    // Postavi tamnu temu eksplicitno
-    document.documentElement.style.setProperty('background-color', '#0f1419', 'important');
-    document.documentElement.style.setProperty('color', '#e8ecf1', 'important');
-  }
-  // Android WebView forceDark API
-  if (typeof Android !== 'undefined' && Android.setForceDark) {
-    Android.setForceDark(false);
-  }
-</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="app.js"></script>
 </body>

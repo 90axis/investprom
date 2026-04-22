@@ -626,8 +626,9 @@ function removeAptPhoto(idx) {
 }
 
 function toggleTheme() {
-  const isLight = document.documentElement.dataset.theme === 'light';
-  document.documentElement.dataset.theme = isLight ? '' : 'light';
+  const isLight = document.documentElement.dataset.theme !== 'dark';
+  document.documentElement.dataset.theme = isLight ? 'dark' : 'light';
+  document.documentElement.style.colorScheme = isLight ? 'dark' : 'light';
   localStorage.setItem('investprom_theme', isLight ? 'dark' : 'light');
   // Update label if settings still open
   const lbl = document.getElementById('themeLabel');
@@ -636,13 +637,13 @@ function toggleTheme() {
 
 function applyTheme() {
   const saved = localStorage.getItem('investprom_theme');
-  if (saved === 'light') {
-    document.documentElement.dataset.theme = 'light';
-  } else {
-    // Uvijek prisilno tamna tema — sprijecava Android WebView da
-    // primijeni sistemsku tamnu temu i mijesa boje
+  if (saved === 'dark') {
     document.documentElement.dataset.theme = 'dark';
     document.documentElement.style.colorScheme = 'dark';
+  } else {
+    // Default je svjetla tema
+    document.documentElement.dataset.theme = 'light';
+    document.documentElement.style.colorScheme = 'light';
   }
 }
 
