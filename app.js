@@ -536,8 +536,8 @@ function openSettings() {
       <h3 style="font-size:13px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px;">🎨 Tema</h3>
       <div style="background:var(--surface-2); padding:12px 14px; border-radius:8px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
         <div>
-          <div style="font-weight:600;" id="themeLabel">${document.documentElement.dataset.theme === 'light' ? '☀️ Svetla tema' : '🌙 Tamna tema'}</div>
-          <div style="font-size:12px; color:var(--text-dim);">Tamna je bolja za rad, svetla za štampu</div>
+          <div style="font-weight:600;" id="themeLabel">${document.documentElement.dataset.theme === 'light' ? '☀️ Bijela tema' : '🌙 Tamna tema'}</div>
+          <div style="font-size:12px; color:var(--text-dim);">Tamna za rad, bijela za štampu</div>
         </div>
         <button class="btn btn-secondary" onclick="toggleTheme()" style="font-size:13px;">Promeni</button>
       </div>
@@ -629,7 +629,7 @@ function toggleTheme() {
   localStorage.setItem('investprom_theme', isLight ? 'dark' : 'light');
   // Update label if settings still open
   const lbl = document.getElementById('themeLabel');
-  if (lbl) lbl.textContent = isLight ? '🌙 Tamna tema' : '☀️ Svetla tema';
+  if (lbl) lbl.textContent = isLight ? '🌙 Tamna tema' : '☀️ Bijela tema';
 }
 
 function applyTheme() {
@@ -911,27 +911,15 @@ function updateNotificationBadge() {
 
 // Check existing session on load
 async function checkSession() {
-  const session = localStorage.getItem(SESSION_KEY);
-  if (session) {
-    const s = JSON.parse(session);
-    const SESSION_DURATION = 4 * 60 * 60 * 1000; // 4 sata
-    const elapsed = Date.now() - s.ts;
-    if (elapsed < SESSION_DURATION) {
-      currentUser = s.user;
-      enterApp();
-      return true;
-    }
-    // Sesija istekla — provjeri da li ima otisak prsta
-    const biom = localStorage.getItem(BIOMETRIC_KEY);
-    if (biom) {
-      // Otisak prsta je aktivan — pokazi login screen sa biometrijskim dugmetom
-      // ali ne auto-loginuj (korisnik mora sam pritisnuti dugme)
-      localStorage.removeItem(SESSION_KEY);
-      return false;
-    }
-    // Nema otiska — obriši sesiju i zahtijevaj login
-    localStorage.removeItem(SESSION_KEY);
+  // Uvijek zahtijevaj autentifikaciju pri ulasku
+  // Ako ima otisak prsta — auto-pokušaj biometrijski login
+  const biom = localStorage.getItem(BIOMETRIC_KEY);
+  if (biom) {
+    // Kratka pauza da se UI učita, pa auto-triggeruj otisak
+    setTimeout(() => doLoginBiometric(), 500);
+    return false;
   }
+  // Nema otiska — prikaži login screen
   return false;
 }
 
@@ -1315,7 +1303,7 @@ function renderMonthlyChart() {
   return `
     <div style="display:flex; gap:24px; margin-bottom:16px; font-size:12px; flex-wrap:wrap;">
       <div style="display:flex; align-items:center; gap:8px;">
-        <div style="width:14px; height:14px; background:linear-gradient(to top, #22c55e, #4ade80); border-radius:3px;"></div>
+        <div style="width:14px; height:14px; background:linear-gradient(to top, #00c853, #69f0ae); border-radius:3px;"></div>
         <span>Naplaćeno: <strong style="color:var(--success);">${fmtEur(totalCollected)}</strong></span>
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
@@ -1330,8 +1318,8 @@ function renderMonthlyChart() {
         return `
         <div style="display:flex; flex-direction:column; align-items:center; gap:6px; height:100%;">
           <div style="flex:1; display:flex; flex-direction:row; justify-content:center; align-items:flex-end; width:100%; gap:2px;">
-            <div style="flex:1; height:${(cVal/max)*100}%; background:linear-gradient(to top, #22c55e, #4ade80); border-radius:3px 3px 0 0; min-height:${cVal > 0 ? '2px' : '0'}; position:relative;" title="Naplaćeno: ${fmtEur(cVal)}">
-              ${cVal > 0 ? `<div style="position:absolute; top:-16px; left:-20px; right:-20px; text-align:center; font-size:9px; font-weight:600; color:var(--success); white-space:nowrap;">${(cVal/1000).toFixed(1)}k</div>` : ''}
+            <div style="flex:1; height:${(cVal/max)*100}%; background:linear-gradient(to top, #00c853, #69f0ae); border-radius:3px 3px 0 0; min-height:${cVal > 0 ? '2px' : '0'}; position:relative;" title="Naplaćeno: ${fmtEur(cVal)}">
+              ${cVal > 0 ? `<div style="position:absolute; top:-16px; left:-20px; right:-20px; text-align:center; font-size:9px; font-weight:600; color:#69f0ae; white-space:nowrap;">${(cVal/1000).toFixed(1)}k</div>` : ''}
             </div>
             <div style="flex:1; height:${(eVal/max)*100}%; background:linear-gradient(to top, var(--accent), #e3b584); border-radius:3px 3px 0 0; min-height:${eVal > 0 ? '2px' : '0'}; position:relative; opacity:0.8;" title="Predviđeno: ${fmtEur(eVal)}">
             </div>
@@ -5423,7 +5411,7 @@ function renderStatChart(type) {
             <span style="color:var(--text-dim);">${fmtEur(total)}</span>
           </div>
           <div style="display:flex; height:28px; background:var(--surface-3); border-radius:6px; overflow:hidden;">
-            <div style="width:${paidW}%; background:linear-gradient(to right, #22c55e, #4ade80); display:flex; align-items:center; padding:0 8px; font-size:11px; color:#1a2332; font-weight:600;" title="Naplaćeno">
+            <div style="width:${paidW}%; background:linear-gradient(to right, #00c853, #69f0ae); display:flex; align-items:center; padding:0 8px; font-size:11px; color:#1a2332; font-weight:600;" title="Naplaćeno">
               ${paidW > 12 ? fmtEur(paid) : ''}
             </div>
             <div style="width:${remainW}%; background:linear-gradient(to right, #f87171, #fca5a5); display:flex; align-items:center; padding:0 8px; font-size:11px; color:#1a2332; font-weight:600;" title="Preostalo">
@@ -5490,14 +5478,14 @@ function renderStatChart(type) {
           <div style="display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; margin-bottom:8px;">
             <div style="font-weight:600; color:var(--accent);">LAMELA A</div>
             <div style="height:24px; background:var(--surface-3); border-radius:4px; overflow:hidden; position:relative;">
-              <div style="height:100%; width:${(aPaid/maxP)*100}%; background:linear-gradient(to right, #22c55e, #4ade80);"></div>
+              <div style="height:100%; width:${(aPaid/maxP)*100}%; background:linear-gradient(to right, #00c853, #69f0ae);"></div>
             </div>
             <div style="color:var(--success); font-size:12px; font-weight:600;">${fmtEur(aPaid)}</div>
           </div>
           <div style="display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;">
             <div style="font-weight:600; color:var(--accent);">LAMELA B</div>
             <div style="height:24px; background:var(--surface-3); border-radius:4px; overflow:hidden; position:relative;">
-              <div style="height:100%; width:${(bPaid/maxP)*100}%; background:linear-gradient(to right, #22c55e, #4ade80);"></div>
+              <div style="height:100%; width:${(bPaid/maxP)*100}%; background:linear-gradient(to right, #00c853, #69f0ae);"></div>
             </div>
             <div style="color:var(--success); font-size:12px; font-weight:600;">${fmtEur(bPaid)}</div>
           </div>
@@ -5709,7 +5697,7 @@ function renderMonthCard(key, monthData, isHighlight) {
         ${hasMixed ? `
           <!-- Mixed: planned + unexpected - show two bars -->
           <div style="height:6px; background:var(--surface-3); border-radius:3px; overflow:hidden; margin-bottom:2px;">
-            <div style="height:100%; width:${paidPct}%; background:linear-gradient(to right, #22c55e, #4ade80);"></div>
+            <div style="height:100%; width:${paidPct}%; background:linear-gradient(to right, #00c853, #69f0ae);"></div>
           </div>
           <div style="height:4px; background:var(--surface-3); border-radius:3px; overflow:hidden; margin-bottom:4px;">
             <div style="height:100%; width:100%; background:linear-gradient(to right, #3b82f6, #60a5fa); opacity:0.7;"></div>
@@ -5731,7 +5719,7 @@ function renderMonthCard(key, monthData, isHighlight) {
         ` : `
           <!-- Only planned -->
           <div style="height:6px; background:var(--surface-3); border-radius:3px; overflow:hidden; margin-bottom:4px;">
-            <div style="height:100%; width:${paidPct}%; background:linear-gradient(to right, #22c55e, #4ade80);"></div>
+            <div style="height:100%; width:${paidPct}%; background:linear-gradient(to right, #00c853, #69f0ae);"></div>
           </div>
           <div style="display:flex; justify-content:space-between; font-size:10px;">
             <span style="color:var(--success);">${fmtEur(paid)}</span>
@@ -6411,7 +6399,7 @@ function renderMonthlySalesChart() {
               <div style="display:flex; flex-direction:column; align-items:center; gap:3px; height:100%;" title="${m.label} ${m.year}: ${m.sales} prodaja · ${fmtEur(m.revenue)}">
                 <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end; width:100%;">
                   ${m.sales > 0 ? `<div style="font-size:9px; font-weight:700; text-align:center; color:${m.isCurrent ? 'var(--accent)' : 'var(--success)'}; margin-bottom:2px;">${m.sales}</div>` : ''}
-                  <div style="width:100%; height:${hPct}%; min-height:${m.sales>0?'4px':'0'}; background:${m.isCurrent ? 'linear-gradient(to top, var(--accent), #e3b584)' : 'linear-gradient(to top, #22c55e, #4ade80)'}; border-radius:3px 3px 0 0; transition:height 0.3s;"></div>
+                  <div style="width:100%; height:${hPct}%; min-height:${m.sales>0?'4px':'0'}; background:${m.isCurrent ? 'linear-gradient(to top, var(--accent), #e3b584)' : 'linear-gradient(to top, #00c853, #69f0ae)'}; border-radius:3px 3px 0 0; transition:height 0.3s;"></div>
                 </div>
                 <div style="font-size:9px; color:${m.isCurrent ? 'var(--accent)' : 'var(--text-dim)'}; font-weight:${m.isCurrent ? '700' : '400'};">${m.label}</div>
               </div>
