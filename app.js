@@ -904,27 +904,14 @@ function updateNotificationBadge() {
 
 // Check existing session on load
 async function checkSession() {
-  const session = localStorage.getItem(SESSION_KEY);
-  if (session) {
-    const s = JSON.parse(session);
-    const SESSION_DURATION = 4 * 60 * 60 * 1000; // 4 sata
-    const elapsed = Date.now() - s.ts;
-    if (elapsed < SESSION_DURATION) {
-      currentUser = s.user;
-      enterApp();
-      return true;
-    }
-    // Sesija istekla — provjeri da li ima otisak prsta
-    const biom = localStorage.getItem(BIOMETRIC_KEY);
-    if (biom) {
-      // Otisak prsta je aktivan — pokazi login screen sa biometrijskim dugmetom
-      // ali ne auto-loginuj (korisnik mora sam pritisnuti dugme)
-      localStorage.removeItem(SESSION_KEY);
-      return false;
-    }
-    // Nema otiska — obriši sesiju i zahtijevaj login
-    localStorage.removeItem(SESSION_KEY);
+  // Uvijek traži autentifikaciju pri ulasku
+  // Ako ima otisak prsta — auto-pokreni biometrijski login
+  const biom = localStorage.getItem(BIOMETRIC_KEY);
+  if (biom) {
+    setTimeout(() => doLoginBiometric(), 500);
+    return false;
   }
+  // Nema otiska — prikaži login screen
   return false;
 }
 
