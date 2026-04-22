@@ -20,18 +20,18 @@
 
 /* Jedina fiksna neutralna tema */
 :root {
-  --bg: #1e2a3a;
-  --surface: #253347;
-  --surface-2: #2d3e54;
-  --surface-3: #354861;
+  --bg: #0d1b2a;
+  --surface: #1a2a3d;
+  --surface-2: #1f3248;
+  --surface-3: #263d56;
   --accent: #d4a574;
   --accent-hover: #e3b584;
   --text: #f0f4f8;
-  --text-dim: #9aafc4;
+  --text-dim: #8fafc9;
   --success: #00e676;
   --danger: #ff5252;
   --warning: #ffab40;
-  --border: rgba(255,255,255,0.12);
+  --border: rgba(255,255,255,0.18);
   --chart-paid: #00e676;
   --chart-expected: #ff9100;
   color-scheme: dark;
@@ -403,9 +403,10 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 
 .stat-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255,255,255,0.2);
   border-radius: 12px;
   padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .stat-label {
@@ -441,7 +442,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 
 .panel {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255,255,255,0.18);
   border-radius: 12px;
   overflow: hidden;
 }

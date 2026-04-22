@@ -1312,7 +1312,7 @@ function renderMonthlyChart() {
         <span>Naplaćeno: <strong style="color:var(--success);">${fmtEur(totalCollected)}</strong></span>
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
-        <div style="width:14px; height:14px; background:linear-gradient(to top, #ff6d00, #ff9100); border-radius:3px;"></div>
+        <div style="width:14px; height:14px; background:linear-gradient(to top, #e65100, #ff9100); border-radius:3px;"></div>
         <span>Predviđeno: <strong style="color:var(--accent);">${fmtEur(totalExpected)}</strong></span>
       </div>
     </div>
@@ -1323,10 +1323,10 @@ function renderMonthlyChart() {
         return `
         <div style="display:flex; flex-direction:column; align-items:center; gap:6px; height:100%;">
           <div style="flex:1; display:flex; flex-direction:row; justify-content:center; align-items:flex-end; width:100%; gap:2px;">
-            <div style="flex:1; height:${(cVal/max)*100}%; background:linear-gradient(to top, #00c853, #00e676); border-radius:3px 3px 0 0; min-height:${cVal > 0 ? '2px' : '0'}; position:relative;" title="Naplaćeno: ${fmtEur(cVal)}">
+            <div style="flex:1; height:${(cVal/max)*100}%; background:#00e676; border-radius:3px 3px 0 0; min-height:${cVal > 0 ? '2px' : '0'}; position:relative;" title="Naplaćeno: ${fmtEur(cVal)}">
               ${cVal > 0 ? `<div style="position:absolute; top:-16px; left:-20px; right:-20px; text-align:center; font-size:9px; font-weight:600; color:#00e676; white-space:nowrap;">${(cVal/1000).toFixed(1)}k</div>` : ''}
             </div>
-            <div style="flex:1; height:${(eVal/max)*100}%; background:linear-gradient(to top, #ff6d00, #ff9100); border-radius:3px 3px 0 0; min-height:${eVal > 0 ? '2px' : '0'}; position:relative; opacity:0.8;" title="Predviđeno: ${fmtEur(eVal)}">
+            <div style="flex:1; height:${(eVal/max)*100}%; background:linear-gradient(to top, #e65100, #ff9100); border-radius:3px 3px 0 0; min-height:${eVal > 0 ? '2px' : '0'}; position:relative; opacity:0.8;" title="Predviđeno: ${fmtEur(eVal)}">
             </div>
           </div>
           <div style="font-size:11px; color:var(--text-dim);">${monthName}</div>
@@ -6416,7 +6416,7 @@ function renderMonthlySalesChart() {
               <div style="display:flex; flex-direction:column; align-items:center; gap:3px; height:100%;" title="${m.label} ${m.year}: ${m.sales} prodaja · ${fmtEur(m.revenue)}">
                 <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end; width:100%;">
                   ${m.sales > 0 ? `<div style="font-size:9px; font-weight:700; text-align:center; color:${m.isCurrent ? 'var(--accent)' : 'var(--success)'}; margin-bottom:2px;">${m.sales}</div>` : ''}
-                  <div style="width:100%; height:${hPct}%; min-height:${m.sales>0?'4px':'0'}; background:${m.isCurrent ? 'linear-gradient(to top, var(--accent), #e3b584)' : 'linear-gradient(to top, #22c55e, #4ade80)'}; border-radius:3px 3px 0 0; transition:height 0.3s;"></div>
+                  <div style="width:100%; height:${hPct}%; min-height:${m.sales>0?'4px':'0'}; background:${m.isCurrent ? 'linear-gradient(to top, var(--accent), #e3b584)' : 'linear-gradient(to top, #00c853, #69f0ae)'}; border-radius:3px 3px 0 0; transition:height 0.3s;"></div>
                 </div>
                 <div style="font-size:9px; color:${m.isCurrent ? 'var(--accent)' : 'var(--text-dim)'}; font-weight:${m.isCurrent ? '700' : '400'};">${m.label}</div>
               </div>
