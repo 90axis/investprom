@@ -123,6 +123,7 @@ async function syncFromSupabase() {
       const vrednost_sa_pdv = +a.vrednost_sa_pdv || 0;
       return {
         _id: a.id, lamela: a.lamela, stan: a.stan, sprat: a.sprat||'',
+        kategorija: a.kategorija||'',
         ime: a.ime||'', prodat: a.prodat, vlasnik_parcele: a.vlasnik_parcele,
         ugovor: a.ugovor, predugovor: a.predugovor||false,
         povrsina: +a.povrsina||0, cena_m2: +a.cena_m2||0, cena_m2_pdv: +a.cena_m2_pdv||0,
@@ -212,6 +213,7 @@ async function sbSave(table, data, conflict) {
 async function sbUpsertApartment(a) {
   const id = await sbSave('apartments', {
     id: a._id||undefined, lamela: a.lamela, stan: a.stan, sprat: a.sprat, ime: a.ime,
+    kategorija: a.kategorija||null,
     prodat: a.prodat, vlasnik_parcele: a.vlasnik_parcele, ugovor: a.ugovor, predugovor: a.predugovor||false,
     povrsina: a.povrsina, cena_m2: a.cena_m2, cena_m2_pdv: a.cena_m2_pdv,
     vrednost_bez_pdv: a.vrednost_bez_pdv, vrednost_sa_pdv: a.vrednost_sa_pdv,
@@ -1429,6 +1431,10 @@ function renderApartments(c) {
   else if (currentFilter === 'outstanding') filtered = filtered.filter(a => a.prodat && hasDebt(a.preostalo));
   else if (currentFilter === 'lamela_a') filtered = filtered.filter(a => a.lamela === 'A');
   else if (currentFilter === 'lamela_b') filtered = filtered.filter(a => a.lamela === 'B');
+  else if (currentFilter === 'gars') filtered = filtered.filter(a => a.kategorija === 'garsonjera');
+  else if (currentFilter === 'dvos') filtered = filtered.filter(a => a.kategorija === 'dvosoban');
+  else if (currentFilter === 'tros') filtered = filtered.filter(a => a.kategorija === 'trosoban');
+  else if (currentFilter === 'cets') filtered = filtered.filter(a => a.kategorija === 'četvorosoban');
   else if (currentFilter === 'arrears') filtered = filtered.filter(a => getArrearsInfo(a));
   
   if (searchQuery) {
@@ -1463,9 +1469,13 @@ function renderApartments(c) {
       <div class="chip ${currentFilter === 'vlasnici' ? 'active' : ''}" style="border-color:#a78bfa; color:#c4b5fd;" onclick="setFilter('vlasnici')">Vlasnici (${DATA.apartments.filter(a=>a.vlasnik_parcele).length})</div>
       <div class="chip ${currentFilter === 'outstanding' ? 'active' : ''}" onclick="setFilter('outstanding')">Sa dugom (${DATA.apartments.filter(a=>a.prodat && hasDebt(a.preostalo)).length})</div>
       ${arrearsCount > 0 ? `<div class="chip ${currentFilter === 'arrears' ? 'active' : ''}" style="border-color:var(--danger); color:var(--danger);" onclick="setFilter('arrears')">⚠ Kasne (${arrearsCount})</div>` : ''}
-      <div style="flex:1;"></div>
+      <div class="chip ${currentFilter === 'gars' ? 'active' : ''}" onclick="setFilter('gars')">Garsonjere (${DATA.apartments.filter(a=>!a.vlasnik_parcele && a.kategorija==='garsonjera').length})</div>
+      <div class="chip ${currentFilter === 'dvos' ? 'active' : ''}" onclick="setFilter('dvos')">Dvosobni (${DATA.apartments.filter(a=>!a.vlasnik_parcele && a.kategorija==='dvosoban').length})</div>
+      <div class="chip ${currentFilter === 'tros' ? 'active' : ''}" onclick="setFilter('tros')">Trosobni (${DATA.apartments.filter(a=>!a.vlasnik_parcele && a.kategorija==='trosoban').length})</div>
+      <div class="chip ${currentFilter === 'cets' ? 'active' : ''}" onclick="setFilter('cets')">Četvorosobni (${DATA.apartments.filter(a=>!a.vlasnik_parcele && a.kategorija==='četvorosoban').length})</div>
       <button class="btn btn-secondary" onclick="openNewPaymentDialog()">💰 Nova uplata</button>
       <button class="btn btn-primary" onclick="openSellDialog('apartment')">🔑 Prodaj stan</button>
+      <div style="flex:1;"></div>
     </div>
     
     <div class="table-wrap">
@@ -1583,9 +1593,9 @@ function renderGarages(c) {
       <div class="chip ${currentFilter === 'sold' ? 'active' : ''}" onclick="setFilter('sold')">Prodate (${DATA.garages.filter(g=>g.prodat).length})</div>
       <div class="chip ${currentFilter === 'available' ? 'active' : ''}" onclick="setFilter('available')">Slobodne (${DATA.garages.filter(g=>!g.prodat && !g.vlasnik_parcele).length})</div>
       ${DATA.garages.some(g => g.vlasnik_parcele) ? `<div class="chip ${currentFilter === 'vlasnici' ? 'active' : ''}" style="border-color:#a78bfa; color:#c4b5fd;" onclick="setFilter('vlasnici')">Vlasnici (${DATA.garages.filter(g=>g.vlasnik_parcele).length})</div>` : ''}
-      <div style="flex:1;"></div>
       <button class="btn btn-secondary" onclick="openNewPaymentDialog()">💰 Nova uplata</button>
       <button class="btn btn-primary" onclick="openSellDialog('garage')">🔑 Prodaj garažu</button>
+      <div style="flex:1;"></div>
     </div>
     
     <div class="table-wrap">
@@ -1658,9 +1668,9 @@ function renderOstave(c) {
       <div class="chip ${currentFilter === 'sold' ? 'active' : ''}" onclick="setFilter('sold')">Prodate (${DATA.ostave.filter(o=>o.prodat).length})</div>
       <div class="chip ${currentFilter === 'available' ? 'active' : ''}" onclick="setFilter('available')">Slobodne (${DATA.ostave.filter(o=>!o.prodat && !o.vlasnik_parcele).length})</div>
       ${DATA.ostave.some(o => o.vlasnik_parcele) ? `<div class="chip ${currentFilter === 'vlasnici' ? 'active' : ''}" style="border-color:#a78bfa; color:#c4b5fd;" onclick="setFilter('vlasnici')">Vlasnici (${DATA.ostave.filter(o=>o.vlasnik_parcele).length})</div>` : ''}
-      <div style="flex:1;"></div>
       <button class="btn btn-secondary" onclick="openNewPaymentDialog()">💰 Nova uplata</button>
       <button class="btn btn-primary" onclick="openSellDialog('ostava')">🔑 Prodaj ostavu</button>
+      <div style="flex:1;"></div>
     </div>
     
     <div class="table-wrap">
