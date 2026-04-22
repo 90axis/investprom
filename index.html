@@ -6,9 +6,23 @@
 <meta name="theme-color" content="#1a2332">
 <meta name="color-scheme" content="light dark">
 <style>
-  /* Forsira aplikaciju da uvijek koristi vlastite boje, ignorira sistem temu */
-  :root { color-scheme: only light; }
-  [data-theme="light"] { color-scheme: only light; }
+  /* Prisilno override sistemske tamne teme — koristimo vlastite boje */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      background-color: #0f1419 !important;
+      color: #e8ecf1 !important;
+    }
+  }
+  /* Sprečava browser da override-uje input, select boje */
+  input, select, textarea, button {
+    color-scheme: light;
+  }
+  [data-theme="light"] input,
+  [data-theme="light"] select,
+  [data-theme="light"] textarea {
+    color-scheme: light;
+  }
 </style>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -35,6 +49,26 @@
   --border: rgba(255,255,255,0.08);
   --chart-paid: #00e676;
   --chart-expected: #ff9100;
+}
+
+/* Override sistemske tamne teme — prisilno koristi nase tamne boje */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1419;
+    --surface: #1a2332;
+    --surface-2: #243447;
+    --surface-3: #2d4057;
+    --accent: #d4a574;
+    --accent-hover: #e3b584;
+    --text: #e8ecf1;
+    --text-dim: #8a97a8;
+    --success: #00e676;
+    --danger: #ff5252;
+    --warning: #ffab40;
+    --border: rgba(255,255,255,0.08);
+    --chart-paid: #00e676;
+    --chart-expected: #ff9100;
+  }
 }
 
 /* Bijela tema */
