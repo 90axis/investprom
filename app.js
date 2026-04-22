@@ -636,7 +636,14 @@ function toggleTheme() {
 
 function applyTheme() {
   const saved = localStorage.getItem('investprom_theme');
-  if (saved === 'light') document.documentElement.dataset.theme = 'light';
+  if (saved === 'light') {
+    document.documentElement.dataset.theme = 'light';
+  } else {
+    // Uvijek prisilno tamna tema — sprijecava Android WebView da
+    // primijeni sistemsku tamnu temu i mijesa boje
+    document.documentElement.dataset.theme = 'dark';
+    document.documentElement.style.colorScheme = 'dark';
+  }
 }
 
 function backupData() {
