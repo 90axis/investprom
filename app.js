@@ -1321,7 +1321,7 @@ function renderMonthlyChart() {
         <span>Naplaćeno: <strong style="color:var(--success);">${fmtEur(totalCollected)}</strong></span>
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
-        <div style="width:14px; height:14px; background:linear-gradient(to top, var(--accent), #e3b584); border-radius:3px;"></div>
+        <div style="width:14px; height:14px; background:linear-gradient(to top, #ff6d00, #ff9100); border-radius:3px;"></div>
         <span>Predviđeno: <strong style="color:var(--accent);">${fmtEur(totalExpected)}</strong></span>
       </div>
     </div>
@@ -1332,10 +1332,10 @@ function renderMonthlyChart() {
         return `
         <div style="display:flex; flex-direction:column; align-items:center; gap:6px; height:100%;">
           <div style="flex:1; display:flex; flex-direction:row; justify-content:center; align-items:flex-end; width:100%; gap:2px;">
-            <div style="flex:1; height:${(cVal/max)*100}%; background:linear-gradient(to top, #22c55e, #4ade80); border-radius:3px 3px 0 0; min-height:${cVal > 0 ? '2px' : '0'}; position:relative;" title="Naplaćeno: ${fmtEur(cVal)}">
-              ${cVal > 0 ? `<div style="position:absolute; top:-16px; left:-20px; right:-20px; text-align:center; font-size:9px; font-weight:600; color:var(--success); white-space:nowrap;">${(cVal/1000).toFixed(1)}k</div>` : ''}
+            <div style="flex:1; height:${(cVal/max)*100}%; background:linear-gradient(to top, #00c853, #00e676); border-radius:3px 3px 0 0; min-height:${cVal > 0 ? '2px' : '0'}; position:relative;" title="Naplaćeno: ${fmtEur(cVal)}">
+              ${cVal > 0 ? `<div style="position:absolute; top:-16px; left:-20px; right:-20px; text-align:center; font-size:9px; font-weight:600; color:#00e676; white-space:nowrap;">${(cVal/1000).toFixed(1)}k</div>` : ''}
             </div>
-            <div style="flex:1; height:${(eVal/max)*100}%; background:linear-gradient(to top, var(--accent), #e3b584); border-radius:3px 3px 0 0; min-height:${eVal > 0 ? '2px' : '0'}; position:relative; opacity:0.8;" title="Predviđeno: ${fmtEur(eVal)}">
+            <div style="flex:1; height:${(eVal/max)*100}%; background:linear-gradient(to top, #ff6d00, #ff9100); border-radius:3px 3px 0 0; min-height:${eVal > 0 ? '2px' : '0'}; position:relative; opacity:0.8;" title="Predviđeno: ${fmtEur(eVal)}">
             </div>
           </div>
           <div style="font-size:11px; color:var(--text-dim);">${monthName}</div>
@@ -1460,6 +1460,10 @@ function renderApartments(c) {
   const arrearsCount = DATA.apartments.filter(a => getArrearsInfo(a)).length;
   
   c.innerHTML = `
+    <div style="display:flex; gap:8px; padding:8px 12px 4px; flex-shrink:0;">
+      <button class="btn btn-secondary" onclick="openNewPaymentDialog()">💰 Nova uplata</button>
+      <button class="btn btn-primary" onclick="openSellDialog('apartment')">🔑 Prodaj stan</button>
+    </div>
     <div class="filter-row">
       <div class="chip ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">Za prodaju (${DATA.apartments.filter(a => !a.vlasnik_parcele).length})</div>
       <div class="chip ${currentFilter === 'lamela_a' ? 'active' : ''}" onclick="setFilter('lamela_a')">Lamela A (${lamelaCountA})</div>
@@ -1473,9 +1477,6 @@ function renderApartments(c) {
       <div class="chip ${currentFilter === 'dvos' ? 'active' : ''}" onclick="setFilter('dvos')">Dvosobni (${DATA.apartments.filter(a=>!a.vlasnik_parcele && a.kategorija==='dvosoban').length})</div>
       <div class="chip ${currentFilter === 'tros' ? 'active' : ''}" onclick="setFilter('tros')">Trosobni (${DATA.apartments.filter(a=>!a.vlasnik_parcele && a.kategorija==='trosoban').length})</div>
       <div class="chip ${currentFilter === 'cets' ? 'active' : ''}" onclick="setFilter('cets')">Četvorosobni (${DATA.apartments.filter(a=>!a.vlasnik_parcele && a.kategorija==='četvorosoban').length})</div>
-      <button class="btn btn-secondary" onclick="openNewPaymentDialog()">💰 Nova uplata</button>
-      <button class="btn btn-primary" onclick="openSellDialog('apartment')">🔑 Prodaj stan</button>
-      <div style="flex:1;"></div>
     </div>
     
     <div class="table-wrap">
@@ -1593,9 +1594,10 @@ function renderGarages(c) {
       <div class="chip ${currentFilter === 'sold' ? 'active' : ''}" onclick="setFilter('sold')">Prodate (${DATA.garages.filter(g=>g.prodat).length})</div>
       <div class="chip ${currentFilter === 'available' ? 'active' : ''}" onclick="setFilter('available')">Slobodne (${DATA.garages.filter(g=>!g.prodat && !g.vlasnik_parcele).length})</div>
       ${DATA.garages.some(g => g.vlasnik_parcele) ? `<div class="chip ${currentFilter === 'vlasnici' ? 'active' : ''}" style="border-color:#a78bfa; color:#c4b5fd;" onclick="setFilter('vlasnici')">Vlasnici (${DATA.garages.filter(g=>g.vlasnik_parcele).length})</div>` : ''}
+    </div>
+    <div style="display:flex; gap:8px; padding:8px 12px 4px; flex-shrink:0;">
       <button class="btn btn-secondary" onclick="openNewPaymentDialog()">💰 Nova uplata</button>
       <button class="btn btn-primary" onclick="openSellDialog('garage')">🔑 Prodaj garažu</button>
-      <div style="flex:1;"></div>
     </div>
     
     <div class="table-wrap">
@@ -1668,9 +1670,10 @@ function renderOstave(c) {
       <div class="chip ${currentFilter === 'sold' ? 'active' : ''}" onclick="setFilter('sold')">Prodate (${DATA.ostave.filter(o=>o.prodat).length})</div>
       <div class="chip ${currentFilter === 'available' ? 'active' : ''}" onclick="setFilter('available')">Slobodne (${DATA.ostave.filter(o=>!o.prodat && !o.vlasnik_parcele).length})</div>
       ${DATA.ostave.some(o => o.vlasnik_parcele) ? `<div class="chip ${currentFilter === 'vlasnici' ? 'active' : ''}" style="border-color:#a78bfa; color:#c4b5fd;" onclick="setFilter('vlasnici')">Vlasnici (${DATA.ostave.filter(o=>o.vlasnik_parcele).length})</div>` : ''}
+    </div>
+    <div style="display:flex; gap:8px; padding:8px 12px 4px; flex-shrink:0;">
       <button class="btn btn-secondary" onclick="openNewPaymentDialog()">💰 Nova uplata</button>
       <button class="btn btn-primary" onclick="openSellDialog('ostava')">🔑 Prodaj ostavu</button>
-      <div style="flex:1;"></div>
     </div>
     
     <div class="table-wrap">
@@ -5437,7 +5440,7 @@ function renderStatChart(type) {
             <div style="width:${paidW}%; background:linear-gradient(to right, #22c55e, #4ade80); display:flex; align-items:center; padding:0 8px; font-size:11px; color:#1a2332; font-weight:600;" title="Naplaćeno">
               ${paidW > 12 ? fmtEur(paid) : ''}
             </div>
-            <div style="width:${remainW}%; background:linear-gradient(to right, #f87171, #fca5a5); display:flex; align-items:center; padding:0 8px; font-size:11px; color:#1a2332; font-weight:600;" title="Preostalo">
+            <div style="width:${remainW}%; background:linear-gradient(to right, #ff1744, #ff5252); display:flex; align-items:center; padding:0 8px; font-size:11px; color:#1a2332; font-weight:600;" title="Preostalo">
               ${remainW > 12 ? fmtEur(remain) : ''}
             </div>
           </div>
