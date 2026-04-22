@@ -1463,9 +1463,9 @@ function renderApartments(c) {
       <div class="chip ${currentFilter === 'vlasnici' ? 'active' : ''}" style="border-color:#a78bfa; color:#c4b5fd;" onclick="setFilter('vlasnici')">Vlasnici (${DATA.apartments.filter(a=>a.vlasnik_parcele).length})</div>
       <div class="chip ${currentFilter === 'outstanding' ? 'active' : ''}" onclick="setFilter('outstanding')">Sa dugom (${DATA.apartments.filter(a=>a.prodat && hasDebt(a.preostalo)).length})</div>
       ${arrearsCount > 0 ? `<div class="chip ${currentFilter === 'arrears' ? 'active' : ''}" style="border-color:var(--danger); color:var(--danger);" onclick="setFilter('arrears')">⚠ Kasne (${arrearsCount})</div>` : ''}
+      <div style="flex:1;"></div>
       <button class="btn btn-secondary" onclick="openNewPaymentDialog()">💰 Nova uplata</button>
       <button class="btn btn-primary" onclick="openSellDialog('apartment')">🔑 Prodaj stan</button>
-      <div style="flex:1;"></div>
     </div>
     
     <div class="table-wrap">
@@ -1583,9 +1583,9 @@ function renderGarages(c) {
       <div class="chip ${currentFilter === 'sold' ? 'active' : ''}" onclick="setFilter('sold')">Prodate (${DATA.garages.filter(g=>g.prodat).length})</div>
       <div class="chip ${currentFilter === 'available' ? 'active' : ''}" onclick="setFilter('available')">Slobodne (${DATA.garages.filter(g=>!g.prodat && !g.vlasnik_parcele).length})</div>
       ${DATA.garages.some(g => g.vlasnik_parcele) ? `<div class="chip ${currentFilter === 'vlasnici' ? 'active' : ''}" style="border-color:#a78bfa; color:#c4b5fd;" onclick="setFilter('vlasnici')">Vlasnici (${DATA.garages.filter(g=>g.vlasnik_parcele).length})</div>` : ''}
+      <div style="flex:1;"></div>
       <button class="btn btn-secondary" onclick="openNewPaymentDialog()">💰 Nova uplata</button>
       <button class="btn btn-primary" onclick="openSellDialog('garage')">🔑 Prodaj garažu</button>
-      <div style="flex:1;"></div>
     </div>
     
     <div class="table-wrap">
@@ -1658,9 +1658,9 @@ function renderOstave(c) {
       <div class="chip ${currentFilter === 'sold' ? 'active' : ''}" onclick="setFilter('sold')">Prodate (${DATA.ostave.filter(o=>o.prodat).length})</div>
       <div class="chip ${currentFilter === 'available' ? 'active' : ''}" onclick="setFilter('available')">Slobodne (${DATA.ostave.filter(o=>!o.prodat && !o.vlasnik_parcele).length})</div>
       ${DATA.ostave.some(o => o.vlasnik_parcele) ? `<div class="chip ${currentFilter === 'vlasnici' ? 'active' : ''}" style="border-color:#a78bfa; color:#c4b5fd;" onclick="setFilter('vlasnici')">Vlasnici (${DATA.ostave.filter(o=>o.vlasnik_parcele).length})</div>` : ''}
+      <div style="flex:1;"></div>
       <button class="btn btn-secondary" onclick="openNewPaymentDialog()">💰 Nova uplata</button>
       <button class="btn btn-primary" onclick="openSellDialog('ostava')">🔑 Prodaj ostavu</button>
-      <div style="flex:1;"></div>
     </div>
     
     <div class="table-wrap">
@@ -1791,7 +1791,7 @@ function openApartment(lamela, stan) {
   const a = findApartment(lamela, stan);
   if (!a) return;
   trackRecent('apartment', { lamela, stan, label: `Stan ${lamela}-${stan}`, sub: a.ime || 'Slobodan', icon: '🏠' });
-  if (!a.prodat && !a.vlasnik_parcele) { showSellConfirm('apartment', lamela, stan); return; }
+  // Uvijek otvori detalje stana — slobodni stanovi imaju dugme "Prodaj" unutar modala
   renderApartmentModal(a);
 }
 
@@ -1984,6 +1984,7 @@ function renderApartmentModal(a) {
     </div>
     <div class="modal-footer">
       ${!isNew && a.prodat ? `<button class="btn btn-ghost" style="color:var(--danger); margin-right:auto;" onclick="unsellApartment('${a.lamela}', ${a.stan})">Poništi prodaju</button>` : ''}
+      ${!isNew && !a.prodat && !a.vlasnik_parcele ? `<button class="btn btn-primary" style="margin-right:auto;" onclick="closeModal(); showSellConfirm('apartment', '${a.lamela}', ${a.stan})">🔑 Prodaj stan</button>` : ''}
       <button class="btn btn-secondary" onclick="closeModal()">Otkaži</button>
       <button class="btn btn-primary" onclick="saveApartment('${a.lamela}', ${a.stan}, ${isNew})">Sačuvaj</button>
     </div>
