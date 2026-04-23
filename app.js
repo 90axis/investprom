@@ -5312,10 +5312,11 @@ function getGarageLevel(broj) {
 
 function renderStatChart(type) {
   if (type === 'apartments-status') {
-    const sold = DATA.apartments.filter(a => a.prodat).length;
-    const total = DATA.apartments.length;
+    const forSale = DATA.apartments.filter(a => !a.vlasnik_parcele);
+    const sold = forSale.filter(a => a.prodat).length;
+    const total = forSale.length;
     const free = total - sold;
-    const pct = Math.round((sold / total) * 100);
+    const pct = total > 0 ? Math.round((sold / total) * 100) : 0;
     
     const r = 70;
     const c = 2 * Math.PI * r;
@@ -5352,8 +5353,9 @@ function renderStatChart(type) {
   }
   
   if (type === 'garages-status') {
-    const sold = DATA.garages.filter(g => g.prodat).length;
-    const total = DATA.garages.length;
+    const forSale = DATA.garages.filter(g => !g.vlasnik_parcele);
+    const sold = forSale.filter(g => g.prodat).length;
+    const total = forSale.length;
     const free = total - sold;
     const pct = total > 0 ? Math.round((sold / total) * 100) : 0;
     
@@ -6620,5 +6622,36 @@ function showExpectedThisMonth() {
   `;
   document.getElementById('modal').classList.add('active');
 }
+
+
+// ============================================
+// Android back dugme — zatvori modal umjesto izlaska
+// ============================================
+(function() {
+  window.addEventListener('load', () => {
+    history.pushState({ app: true }, '');
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('modal');
+    if (modal) {
+      const observer = new MutationObserver(() => {
+        if (modal.classList.contains('active')) {
+          history.pushState({ modal: true }, '');
+        }
+      });
+      observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+    }
+  });
+
+  window.addEventListener('popstate', () => {
+    const modal = document.getElementById('modal');
+    if (modal && modal.classList.contains('active')) {
+      modal.classList.remove('active');
+    } else {
+      history.pushState({ app: true }, '');
+    }
+  });
+})();
 
 init();
