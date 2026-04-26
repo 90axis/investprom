@@ -1075,7 +1075,7 @@ function renderDashboard(c) {
     if (a.prodat) {
       recentlySold.push({
         type: 'apartment', label: `Stan ${a.lamela}-${a.stan}`,
-        sprat: a.sprat, ime: a.ime, datum: a.datum_prodaje || new Date().toISOString().split('T')[0],
+        sprat: a.sprat, ime: a.ime, datum: a.datum_prodaje || null,
         vrednost: a.vrednost_sa_pdv, lamela: a.lamela, stan: a.stan
       });
     }
@@ -1402,8 +1402,11 @@ function getArrearsInfo(a) {
 
 // --- APARTMENTS VIEW ---
 function renderApartments(c) {
-  let filtered = DATA.apartments.filter(a => !a.vlasnik_parcele);
-  
+  // 'all' prikazuje SVE stanove ukljucujuci vlasnike parcela
+  let filtered = currentFilter === 'all'
+    ? [...DATA.apartments]
+    : DATA.apartments.filter(a => !a.vlasnik_parcele);
+
   if (currentFilter === 'multi' && activeFilters.size > 0) {
     // Multi-select: kombiniraj filtere
     const statusFilters = ['sold','available','outstanding','arrears'];
@@ -1475,18 +1478,18 @@ function renderApartments(c) {
       <button class="btn btn-primary" onclick="openSellDialog('apartment')">🔑 Prodaj stan</button>
     </div>
     <div class="filter-row">
-      <div class="chip ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">Za prodaju (${DATA.apartments.filter(a => !a.vlasnik_parcele).length})</div>
+      <div class="chip ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">Svi (${DATA.apartments.length})</div>
+      <div class="chip ${activeFilters.has('available') ? 'active' : ''}" onclick="toggleFilter('available')">Slobodni (${DATA.apartments.filter(a=>!a.prodat && !a.vlasnik_parcele).length})</div>
+      <div class="chip ${currentFilter === 'sold' && !activeFilters.size ? 'active' : ''}" onclick="setFilter('sold')">Prodati (${DATA.apartments.filter(a=>a.prodat && !a.vlasnik_parcele).length})</div>
+      <div class="chip ${currentFilter === 'vlasnici' ? 'active' : ''}" style="border-color:#a78bfa; color:#c4b5fd;" onclick="setFilter('vlasnici')">Vlasnici (${DATA.apartments.filter(a=>a.vlasnik_parcele).length})</div>
       <div class="chip ${currentFilter === 'lamela_a' ? 'active' : ''}" onclick="setFilter('lamela_a')">Lamela A (${lamelaCountA})</div>
       <div class="chip ${currentFilter === 'lamela_b' ? 'active' : ''}" onclick="setFilter('lamela_b')">Lamela B (${lamelaCountB})</div>
-      <div class="chip ${currentFilter === 'sold' && !activeFilters.size ? 'active' : ''}" onclick="setFilter('sold')">Prodati (${DATA.apartments.filter(a=>a.prodat && !a.vlasnik_parcele).length})</div>
-      <div class="chip ${activeFilters.has('available') ? 'active' : ''}" onclick="toggleFilter('available')">Slobodni (${DATA.apartments.filter(a=>!a.prodat && !a.vlasnik_parcele).length})</div>
-      <div class="chip ${currentFilter === 'vlasnici' ? 'active' : ''}" style="border-color:#a78bfa; color:#c4b5fd;" onclick="setFilter('vlasnici')">Vlasnici (${DATA.apartments.filter(a=>a.vlasnik_parcele).length})</div>
-      <div class="chip ${currentFilter === 'outstanding' && !activeFilters.size ? 'active' : ''}" onclick="setFilter('outstanding')">Sa dugom (${DATA.apartments.filter(a=>a.prodat && hasDebt(a.preostalo)).length})</div>
-      ${arrearsCount > 0 ? `<div class="chip ${currentFilter === 'arrears' && !activeFilters.size ? 'active' : ''}" style="border-color:var(--danger); color:var(--danger);" onclick="setFilter('arrears')">⚠ Kasne (${arrearsCount})</div>` : ''}
       <div class="chip ${activeFilters.has('gars') ? 'active' : ''}" onclick="toggleFilter('gars')">Garsonjere (${DATA.apartments.filter(a=>!a.vlasnik_parcele && a.kategorija==='garsonjera').length})</div>
       <div class="chip ${activeFilters.has('dvos') ? 'active' : ''}" onclick="toggleFilter('dvos')">Dvosobni (${DATA.apartments.filter(a=>!a.vlasnik_parcele && a.kategorija==='dvosoban').length})</div>
       <div class="chip ${activeFilters.has('tros') ? 'active' : ''}" onclick="toggleFilter('tros')">Trosobni (${DATA.apartments.filter(a=>!a.vlasnik_parcele && a.kategorija==='trosoban').length})</div>
       <div class="chip ${activeFilters.has('cets') ? 'active' : ''}" onclick="toggleFilter('cets')">Četvorosobni (${DATA.apartments.filter(a=>!a.vlasnik_parcele && a.kategorija==='četvorosoban').length})</div>
+      <div class="chip ${currentFilter === 'outstanding' && !activeFilters.size ? 'active' : ''}" onclick="setFilter('outstanding')">Sa dugom (${DATA.apartments.filter(a=>a.prodat && hasDebt(a.preostalo)).length})</div>
+      ${arrearsCount > 0 ? `<div class="chip ${currentFilter === 'arrears' && !activeFilters.size ? 'active' : ''}" style="border-color:var(--danger); color:var(--danger);" onclick="setFilter('arrears')">⚠ Kasne (${arrearsCount})</div>` : ''}
     </div>
     
     <div class="table-wrap">
@@ -5491,8 +5494,8 @@ function renderStatChart(type) {
   }
   
   if (type === 'lamela-compare') {
-    const lamA = DATA.apartments.filter(a => a.lamela === 'A');
-    const lamB = DATA.apartments.filter(a => a.lamela === 'B');
+    const lamA = DATA.apartments.filter(a => a.lamela === 'A' && !a.vlasnik_parcele);
+    const lamB = DATA.apartments.filter(a => a.lamela === 'B' && !a.vlasnik_parcele);
     const aSold = lamA.filter(a => a.prodat).length;
     const bSold = lamB.filter(a => a.prodat).length;
     const aPaid = lamA.reduce((s,a) => s + (a.isplaceno || 0), 0);
