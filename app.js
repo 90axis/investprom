@@ -103,12 +103,13 @@ async function syncFromSupabase() {
     // Build payment maps
     const aptPayMap = {}, garPayMap = {};
     (aptPays.data||[]).forEach(p => {
-      const mk = (p.payment_date||'').substring(0,7) || p.month_key;
+      // month_key ima prednost — to je mjesec RATE, ne datum uplate
+      const mk = p.month_key || (p.payment_date||'').substring(0,7);
       if (!aptPayMap[p.apartment_id]) aptPayMap[p.apartment_id] = {};
       aptPayMap[p.apartment_id][mk] = (aptPayMap[p.apartment_id][mk]||0) + parseFloat(p.amount||0);
     });
     (garPays.data||[]).forEach(p => {
-      const mk = (p.payment_date||'').substring(0,7) || p.month_key;
+      const mk = p.month_key || (p.payment_date||'').substring(0,7);
       if (!garPayMap[p.garage_id]) garPayMap[p.garage_id] = {};
       garPayMap[p.garage_id][mk] = (garPayMap[p.garage_id][mk]||0) + parseFloat(p.amount||0);
     });
@@ -4273,7 +4274,7 @@ function renderCustomerPaymentsAndRates(cu) {
 }
 
 // Quick payment dialog pre-filled from rate click
-function openQuickPayment(type, lamela, idOrBroj, prefillAmount, prefillNote, targetMonthKey) {
+function openQuickPayment(type, lamela, idOrBroj, prefillAmount, prefillNote) {
   // Open the standard new payment dialog but with amount pre-filled
   let item;
   if (type === 'apartment') item = findApartment(lamela, idOrBroj);
@@ -4317,7 +4318,6 @@ function openQuickPayment(type, lamela, idOrBroj, prefillAmount, prefillNote, ta
           <label>Opis / Napomena</label>
           <input id="qp_note" type="text" value="${prefillNote || ''}" placeholder="npr. Rata 3/12">
         </div>
-        <input type="hidden" id="qp_target_month" value="${targetMonthKey || ''}">
       </div>
     </div>
     <div class="modal-footer">
@@ -4344,9 +4344,7 @@ function confirmQuickPayment(type, lamela, idOrBroj) {
   else item = DATA.ostave[parseInt(idOrBroj)];
   if (!item) return;
   
-  // Koristi targetMonthKey ako je dostupan (uplata za buduci/specificni mjesec)
-  const targetMk = (document.getElementById("qp_target_month")?.value || "").trim();
-  const mk = targetMk || date.substring(0,7);
+  const mk = date.substring(0,7);
   if (!item.uplate) item.uplate = {};
   if (!item.uplate_dates) item.uplate_dates = {};
   const existing = Object.keys(item.uplate).filter(k => k.startsWith(mk)).length;
@@ -6275,7 +6273,7 @@ function setNewPaymentType(type) {
       }
       if (apt.planirane_rate) {
         Object.entries(apt.planirane_rate).forEach(([mk, amt]) => {
-          upcoming.push({ label: `${it.label} · ${it.customer}`, amount: amt, desc: mk, date: mk+'-01', monthKey: mk, type, lamela: it.lamela, stan: it.stan });
+          upcoming.push({ label: `${it.label} · ${it.customer}`, amount: amt, desc: mk, type, lamela: it.lamela, stan: it.stan });
         });
       }
     });
@@ -6289,7 +6287,7 @@ function setNewPaymentType(type) {
       <div style="font-size:12px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">⚡ Nadolazeće rate (klikni za brzu uplatu)</div>
       <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
         ${nextRates.map(r => `
-          <div onclick="closeModal(); setTimeout(() => openQuickPayment('${r.type}','${r.lamela||''}',${r.stan||0},${r.amount},'${(r.desc||'').replace(/'/g,"\\'")}','${r.monthKey||''}'), 100);" 
+          <div onclick="closeModal(); setTimeout(() => openQuickPayment('${r.type}','${r.lamela||''}',${r.stan||0},${r.amount},'${(r.desc||'').replace(/'/g,"\\'")}'), 100);" 
                style="padding:10px 12px; border-bottom:1px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center;"
                onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
             <div>
