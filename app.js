@@ -477,7 +477,7 @@ function openSettings() {
   const biomData = hasBiom ? JSON.parse(localStorage.getItem(BIOMETRIC_KEY)) : null;
   const supported = !!window.PublicKeyCredential;
   const isAdmin = currentRole() === 'admin';
-  const allUsers = DATA.users ? Object.keys(DATA.users) : [currentUser];
+  const allUsers = DATA.roles && Object.keys(DATA.roles).length > 0 ? Object.keys(DATA.roles) : [currentUser];
   const archiveCount = (DATA.archive || []).length;
   
   const m = document.getElementById('modalContent');
@@ -505,22 +505,34 @@ function openSettings() {
       </div>
       
       ${isAdmin ? `
-      <!-- Role korisnika - samo admin -->
-      <h3 style="font-size:13px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px;">👥 Role korisnika</h3>
+      <!-- Upravljanje korisnicima - samo admin -->
+      <h3 style="font-size:13px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px;">👥 Korisnici aplikacije</h3>
       <div style="background:var(--surface-2); padding:14px; border-radius:8px; margin-bottom:16px;">
-        <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">Administrator ima pristup svim podacima uključujući Statistiku. Prodavac nema pristup Statistici.</div>
-        ${allUsers.map(u => `
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--border);">
-            <div>
-              <strong>${u}</strong>
-              ${u === currentUser ? ' <span style="font-size:10px; color:var(--accent);">(vi)</span>' : ''}
+        <div style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">Administrator ima pristup svim sekcijama uključujući Statistiku. Prodavac nema pristup Statistici.</div>
+        ${allUsers.map(u => {
+          const uRole = DATA.roles?.[u] || 'admin';
+          const localUsers = JSON.parse(localStorage.getItem(USER_KEY)||'[]');
+          const isLocalUser = localUsers.some(lu => lu.username === u);
+          const canDelete = u !== currentUser && isLocalUser;
+          return `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:1px solid var(--border);">
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <strong style="font-size:14px;">${u}</strong>
+                ${u === currentUser ? '<span style="font-size:10px;color:var(--accent);background:rgba(212,165,116,0.15);padding:2px 6px;border-radius:4px;">vi</span>' : ''}
+                ${isLocalUser ? '<span style="font-size:10px;color:var(--text-dim);background:var(--surface-3);padding:2px 6px;border-radius:4px;">lokalni</span>' : '<span style="font-size:10px;color:var(--text-dim);background:var(--surface-3);padding:2px 6px;border-radius:4px;">Supabase</span>'}
+              </div>
             </div>
-            <select onchange="setUserRole('${u}', this.value)" style="background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:5px 10px; color:var(--text); font-size:13px;">
-              <option value="admin" ${(DATA.roles?.[u]||'admin')==='admin' ? 'selected' : ''}>Administrator</option>
-              <option value="prodavac" ${(DATA.roles?.[u])==='prodavac' ? 'selected' : ''}>Prodavac</option>
+            <select onchange="setUserRole('${u}', this.value)" ${u === currentUser ? 'disabled title="Ne možete mijenjati vlastitu ulogu"' : ''} style="background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:5px 10px; color:var(--text); font-size:13px; ${u === currentUser ? 'opacity:0.6;cursor:not-allowed;' : ''}">
+              <option value="admin" ${uRole === 'admin' ? 'selected' : ''}>Administrator</option>
+              <option value="prodavac" ${uRole === 'prodavac' ? 'selected' : ''}>Prodavac</option>
             </select>
-          </div>
-        `).join('')}
+            ${canDelete ? `<button onclick="deleteUser('${u}')" title="Obriši korisnika" style="background:transparent;border:1px solid var(--danger);color:var(--danger);border-radius:6px;padding:5px 9px;cursor:pointer;font-size:13px;flex-shrink:0;">🗑</button>` : '<div style="width:34px;"></div>'}
+          </div>`;
+        }).join('')}
+        <div style="margin-top:12px;">
+          <button class="btn btn-primary" onclick="openAddUserDialog()" style="width:100%;">➕ Dodaj novog korisnika</button>
+        </div>
       </div>
       
       <!-- Arhiva - samo admin -->
@@ -681,9 +693,111 @@ function setUserRole(username, role) {
   saveToCache();
   const sb = getSupabase();
   if (sb && _isOnline) {
-    sb.from('user_profiles').upsert({ username, role }, { onConflict: 'username' }).then(()=>{});
+    sb.from('user_profiles').upsert({ username, role }, { onConflict: 'username' }).then(()=>{}).catch(err => console.error('setUserRole error:', err));
   }
   showToast(`Rola "${username}" → ${role === 'admin' ? 'Administrator' : 'Prodavac'}`, 'success');
+  openSettings();
+}
+
+// --- UPRAVLJANJE KORISNICIMA ---
+function openAddUserDialog() {
+  const m = document.getElementById('modalContent');
+  m.style.maxWidth = '460px';
+  m.innerHTML = `
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">➕ Dodaj korisnika</div>
+        <div class="modal-title-sub">Novi nalog za prodavca ili administratora</div>
+      </div>
+      <button class="modal-close" onclick="openSettings()">←</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">Korisničko ime</label>
+          <input id="newUserUsername" type="text" placeholder="npr. marko.nikolic" autocomplete="off"
+            style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">Lozinka</label>
+          <input id="newUserPassword" type="password" placeholder="Minimalno 6 karaktera" autocomplete="new-password"
+            style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">Uloga</label>
+          <select id="newUserRole" style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;">
+            <option value="prodavac" selected>Prodavac — bez pristupa Statistici</option>
+            <option value="admin">Administrator — pun pristup</option>
+          </select>
+        </div>
+        <div id="addUserError" style="color:var(--danger);font-size:13px;display:none;padding:8px 12px;background:rgba(255,82,82,0.1);border-radius:6px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer" style="gap:8px;">
+      <button class="btn btn-secondary" onclick="openSettings()">Odustani</button>
+      <button class="btn btn-primary" onclick="addNewUser()">➕ Dodaj korisnika</button>
+    </div>
+  `;
+}
+
+async function addNewUser() {
+  const username = (document.getElementById('newUserUsername')?.value || '').trim();
+  const password = document.getElementById('newUserPassword')?.value || '';
+  const role = document.getElementById('newUserRole')?.value || 'prodavac';
+  const errEl = document.getElementById('addUserError');
+  const showErr = (msg) => { errEl.style.display = 'block'; errEl.textContent = msg; };
+
+  if (!username) { showErr('Unesite korisničko ime'); return; }
+  if (username.length < 3) { showErr('Korisničko ime mora imati najmanje 3 karaktera'); return; }
+  if (!/^[a-zA-Z0-9._-]+$/.test(username)) { showErr('Korisničko ime smije sadržati samo slova, brojeve, tačku, crtu i donju crtu'); return; }
+  if (password.length < 6) { showErr('Lozinka mora imati najmanje 6 karaktera'); return; }
+
+  const existingLocal = JSON.parse(localStorage.getItem(USER_KEY) || '[]');
+  if (existingLocal.find(u => u.username === username)) { showErr('Korisnik s tim imenom već postoji'); return; }
+  if (DATA.roles && DATA.roles[username]) { showErr('Korisnik s tim imenom već postoji'); return; }
+
+  const btn = document.querySelector('#modalContent .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Kreiranje...'; }
+
+  try {
+    const hash = await hashPassword(password);
+    const newUser = { username, passwordHash: hash, createdAt: Date.now(), createdBy: currentUser };
+    existingLocal.push(newUser);
+    localStorage.setItem(USER_KEY, JSON.stringify(existingLocal));
+
+    if (!DATA.roles) DATA.roles = {};
+    DATA.roles[username] = role;
+    saveToCache();
+
+    const sb = getSupabase();
+    if (sb && _isOnline) {
+      sb.from('user_profiles').upsert({ username, role }, { onConflict: 'username' })
+        .then(()=>{}).catch(err => console.error('addNewUser Supabase error:', err));
+    }
+
+    logActivity('SISTEM', `Kreiran korisnik: ${username} (${role === 'admin' ? 'Administrator' : 'Prodavac'})`);
+    showToast(`✓ Korisnik "${username}" uspješno kreiran`, 'success');
+    openSettings();
+  } catch(e) {
+    showErr('Greška: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '➕ Dodaj korisnika'; }
+  }
+}
+
+function deleteUser(username) {
+  if (username === currentUser) { showToast('Ne možete obrisati sebe', 'error'); return; }
+  if (!confirm(`Obrisati korisnika "${username}"?\n\nKorisnik više neće moći da se prijavi u aplikaciju.`)) return;
+
+  const existingLocal = JSON.parse(localStorage.getItem(USER_KEY) || '[]');
+  const filtered = existingLocal.filter(u => u.username !== username);
+  localStorage.setItem(USER_KEY, JSON.stringify(filtered));
+
+  if (DATA.roles) delete DATA.roles[username];
+  saveToCache();
+
+  logActivity('SISTEM', `Obrisan korisnik: ${username}`);
+  showToast(`Korisnik "${username}" obrisan`, 'success');
+  openSettings();
 }
 
 function openArchiveView() {
@@ -1013,7 +1127,10 @@ function renderView() {
   else if (currentView === 'kalendar') renderKalendar(c);
   else if (currentView === 'customers') renderCustomers(c);
   else if (currentView === 'vlasnici') renderVlasnici(c);
-  else if (currentView === 'statistika') renderStatistika(c);
+  else if (currentView === 'statistika') {
+    if (!canAccess('statistika')) { c.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:12px;"><div style="font-size:48px;">🔒</div><div style="color:var(--text-dim);">Nemate pristup ovoj sekciji</div></div>'; return; }
+    renderStatistika(c);
+  }
   else if (currentView === 'activity') renderActivity(c);
   else if (currentView === 'receipts') renderReceipts(c);
 }
@@ -4516,6 +4633,7 @@ function printCustomerProfile(customerKey) {
 // ============================================
 
 function renderStatistika(c) {
+  if (!canAccess('statistika')) { showToast('Nemate pristup Statistici', 'error'); return; }
   // Build statistics DINAMIČKI iz trenutnih podataka (ne iz sačuvane Excel statistike)
   const apts = DATA.apartments;
   const gar = DATA.garages;
