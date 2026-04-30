@@ -13,6 +13,40 @@ let editingYear = 2025;
 let currentUser = null;
 let _supabaseClient = null;
 
+// --- SESSION EXPIRY ---
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+const SESSION_WARN_MS    = 25 * 60 * 1000;
+let _sessionTimer = null;
+let _sessionWarnTimer = null;
+
+function resetSessionTimer() {
+  clearTimeout(_sessionTimer);
+  clearTimeout(_sessionWarnTimer);
+  if (!currentUser) return;
+  _sessionWarnTimer = setTimeout(() => {
+    showToast('⚠️ Sesija ističe za 5 minuta zbog neaktivnosti', 'warning');
+  }, SESSION_WARN_MS);
+  _sessionTimer = setTimeout(() => {
+    showToast('Sesija je istekla zbog neaktivnosti', 'error');
+    setTimeout(() => doLogout(), 1500);
+  }, SESSION_TIMEOUT_MS);
+}
+
+function startSessionWatcher() {
+  ['mousemove','click','keydown','touchstart','scroll'].forEach(ev => {
+    document.addEventListener(ev, resetSessionTimer, { passive: true });
+  });
+  resetSessionTimer();
+}
+
+function stopSessionWatcher() {
+  clearTimeout(_sessionTimer);
+  clearTimeout(_sessionWarnTimer);
+  ['mousemove','click','keydown','touchstart','scroll'].forEach(ev => {
+    document.removeEventListener(ev, resetSessionTimer);
+  });
+}
+
 // --- SUPABASE CONFIG ---
 const SUPABASE_URL = 'https://hrtelkjsmrnhibnosmgc.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_PcEhVYpdID3j7-yEUv2v8w_QY5kZmwr';
@@ -22,6 +56,7 @@ const CACHE_KEY = 'investprom_cache_v1';
 const USER_KEY  = 'investprom_users_v1';
 const SESSION_KEY  = 'investprom_session_v1';
 const BIOMETRIC_KEY = 'investprom_biometric_v1';
+const UPLATE_KEY = 'investprom_uplate_v1';
 const STORAGE_KEY = CACHE_KEY; // alias for legacy calls
 
 // --- SUPABASE CLIENT ---
@@ -895,6 +930,7 @@ async function enableBiometric() {
 
 function doLogout() {
   localStorage.removeItem(SESSION_KEY);
+  stopSessionWatcher();
   currentUser = null;
   document.getElementById('app').classList.remove('active');
   document.getElementById('loginScreen').style.display = 'flex';
@@ -909,7 +945,8 @@ function enterApp() {
   const role = currentRole();
   const statNav = document.getElementById('nav-statistika');
   if (statNav) statNav.style.display = role === 'admin' ? '' : 'none';
-  logActivity('LOGIN', `Prijava: ${currentUser} (${role})`);
+  logActivity('LOGIN', `Prijava: ${currentUser} (${role})`)
+  startSessionWatcher();;
   saveToCache();
   updateNotificationBadge();
   
@@ -1099,7 +1136,8 @@ function switchView(view) {
     vlasnici: 'Vlasnici parcela',
     statistika: 'Statistika',
     activity: 'Dnevnik izmena',
-    receipts: 'Priznanice'
+    receipts: 'Priznanice',
+    uplate: 'Uplate'
   };
   const titleEl = document.getElementById('pageTitle');
   if (view === 'dashboard') {
@@ -1107,8 +1145,8 @@ function switchView(view) {
   } else {
     titleEl.textContent = titles[view] || view;
   }
-  document.getElementById('searchBox').style.display = (view === 'dashboard' || view === 'statistika' || view === 'kalendar' || view === 'activity') ? 'none' : 'block';
-  document.getElementById('exportBtn').style.display = (view === 'dashboard' || view === 'statistika' || view === 'kalendar' || view === 'activity') ? 'none' : 'inline-flex';
+  document.getElementById('searchBox').style.display = (view === 'dashboard' || view === 'statistika' || view === 'kalendar' || view === 'activity' || view === 'uplate') ? 'none' : 'block';
+  document.getElementById('exportBtn').style.display = (view === 'dashboard' || view === 'statistika' || view === 'kalendar' || view === 'activity' || view === 'uplate') ? 'none' : 'inline-flex';
   
   renderView();
 }
@@ -1133,7 +1171,110 @@ function renderView() {
   }
   else if (currentView === 'activity') renderActivity(c);
   else if (currentView === 'receipts') renderReceipts(c);
+  else if (currentView === 'uplate') renderUplate(c);
 }
+// --- UPLATE ---
+function getUplateData() {
+  try { return JSON.parse(localStorage.getItem(UPLATE_KEY) || '{}'); } catch(e) { return {}; }
+}
+
+function saveUplataField(aptId, field, value) {
+  const data = getUplateData();
+  if (!data[aptId]) data[aptId] = {};
+  data[aptId][field] = parseFloat(value) || 0;
+  localStorage.setItem(UPLATE_KEY, JSON.stringify(data));
+  const predugovor = data[aptId].predugovor_iznos || 0;
+  const uplaceno   = data[aptId].uplaceno_na_stan || 0;
+  const preostalo  = predugovor - uplaceno;
+  const cell = document.getElementById('preostalo_' + aptId);
+  if (cell) {
+    cell.textContent = predugovor > 0 || uplaceno > 0 ? fmtEur(preostalo) : '—';
+    cell.style.color = preostalo < 0 ? 'var(--danger)' : preostalo === 0 && predugovor > 0 ? 'var(--success)' : 'var(--warning)';
+  }
+}
+
+function renderUplate(c) {
+  const uData = getUplateData();
+  const apts = DATA.apartments.filter(a => a.prodat && a.ime);
+  apts.sort((a, b) => {
+    if (a.lamela !== b.lamela) return (a.lamela||'').localeCompare(b.lamela||'');
+    return (a.stan||0) - (b.stan||0);
+  });
+
+  const ugovorBadge = (a) => {
+    if (a.ugovor)     return '<span style="color:#22c55e;font-weight:600;">Ugovor</span>';
+    if (a.predugovor) return '<span style="color:#60a5fa;font-weight:600;">Predugovor</span>';
+    return '<span style="color:var(--danger);font-weight:600;">Ne</span>';
+  };
+
+  const TH  = 'padding:10px 12px;text-align:right;font-size:11px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap;border-bottom:2px solid var(--border);';
+  const THL = 'padding:10px 12px;text-align:left;font-size:11px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap;border-bottom:2px solid var(--border);';
+  const THM = 'padding:10px 12px;text-align:right;font-size:11px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap;border-bottom:2px solid var(--accent);background:rgba(212,165,116,0.08);';
+
+  const rows = apts.map(a => {
+    const id = a._id || (a.lamela + '-' + a.stan);
+    const ud = uData[id] || {};
+    const predIznos  = ud.predugovor_iznos || 0;
+    const uplNaStan  = ud.uplaceno_na_stan  || 0;
+    const preostUpl  = predIznos - uplNaStan;
+    const preostColor = preostUpl < 0 ? 'var(--danger)' : preostUpl === 0 && predIznos > 0 ? 'var(--success)' : 'var(--warning)';
+    const preostStr  = predIznos > 0 || uplNaStan > 0 ? fmtEur(preostUpl) : '—';
+    const preostAptColor = (a.preostalo||0) > 0 ? 'var(--warning)' : 'var(--success)';
+
+    const TD  = 'padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border);text-align:right;';
+    const TDL = 'padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border);';
+    const TDM = 'padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border);text-align:right;background:rgba(212,165,116,0.05);';
+    const INP = 'background:var(--surface-3);border:1px solid var(--border);border-radius:5px;padding:4px 8px;color:var(--text);font-size:13px;width:115px;text-align:right;';
+
+    return `<tr onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+      <td style="${TDL}"><strong>${a.lamela}-${a.stan}</strong></td>
+      <td style="${TDL}">${a.ime}${a.vlasnik_parcele ? ' <span style="font-size:10px;color:var(--accent);">(vlasnik parcele)</span>' : ''}</td>
+      <td style="${TDL}">${ugovorBadge(a)}</td>
+      <td style="${TD}">${fmtEur(a.vrednost_sa_pdv)}</td>
+      <td style="${TD}">${fmtEur(a.isplaceno)}</td>
+      <td style="${TD} color:${preostAptColor};">${fmtEur(a.preostalo)}</td>
+      <td style="${TDM} border-left:2px solid var(--accent);">
+        <input type="number" style="${INP}" value="${predIznos||''}" placeholder="0"
+          onchange="saveUplataField('${id}','predugovor_iznos',this.value)" onfocus="this.select()" />
+      </td>
+      <td style="${TDM}">
+        <input type="number" style="${INP}" value="${uplNaStan||''}" placeholder="0"
+          onchange="saveUplataField('${id}','uplaceno_na_stan',this.value)" onfocus="this.select()" />
+      </td>
+      <td style="${TDM}">
+        <span id="preostalo_${id}" style="font-weight:700;color:${preostColor};">${preostStr}</span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  c.innerHTML = `<div style="padding:0 0 40px;">
+    ${apts.length === 0
+      ? '<div class="panel"><div class="empty-state" style="padding:60px;">Nema prodatih stanova sa upisanim kupcima</div></div>'
+      : `<div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;min-width:1000px;">
+            <thead>
+              <tr style="position:sticky;top:0;z-index:10;background:var(--surface);">
+                <th style="${THL}">Stan</th>
+                <th style="${THL}">Kupac</th>
+                <th style="${THL}">Predugovor / Ugovor</th>
+                <th style="${TH}">Vrednost stana</th>
+                <th style="${TH}">Isplaćeno</th>
+                <th style="${TH}">Preostalo za plaćanje</th>
+                <th style="${THM} border-left:2px solid var(--accent);">Predugovor iznos</th>
+                <th style="${THM}">Uplaćeno na stan</th>
+                <th style="${THM}">Preostalo za uplatu</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div style="margin-top:10px;font-size:12px;color:var(--text-dim);padding:0 2px;">
+            💡 Zlatne kolone su za ručni unos — vrijednosti se čuvaju automatski u browseru.
+          </div>
+        </div>`
+    }
+  </div>`;
+}
+
 // --- DASHBOARD ---
 function renderDashboard(c) {
   const apts = DATA.apartments;
