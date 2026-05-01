@@ -1275,6 +1275,89 @@ function renderUplate(c) {
   </div>`;
 }
 
+// --- DASHBOARD MODALS ---
+function showDashboardModal(type) {
+  const m = document.getElementById('modalContent');
+  m.style.maxWidth = '720px';
+  const TR = (cols) => `<tr>${cols.map((c,i) => `<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;${i>1?'text-align:right;':''}">${c}</td>`).join('')}</tr>`;
+  const TH = (cols) => `<tr>${cols.map((c,i) => `<th style="padding:8px 12px;font-size:11px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border-bottom:2px solid var(--border);${i>1?'text-align:right;':''}">${c}</th>`).join('')}</tr>`;
+  const tbl = (head, rows) => `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">${head}${rows}</table></div>`;
+
+  let title = '', body = '';
+
+  if (type === 'prodati-stanovi') {
+    title = 'Prodati stanovi';
+    const sold = DATA.apartments.filter(a => a.prodat && !a.vlasnik_parcele).sort((a,b) => (a.lamela+a.stan).localeCompare(b.lamela+b.stan));
+    const rows = sold.map(a => TR([
+      `<strong>${a.lamela}-${a.stan}</strong>`,
+      a.ime || '—',
+      fmtEur(a.vrednost_sa_pdv),
+      `<span style="color:${a.preostalo>0?'var(--warning)':'var(--success)'};">${fmtEur(a.isplaceno)}</span>`,
+      `<span style="color:${a.preostalo>0?'var(--danger)':'var(--success)'};">${fmtEur(a.preostalo)}</span>`
+    ])).join('');
+    body = sold.length === 0 ? '<div style="padding:40px;text-align:center;color:var(--text-dim);">Nema prodatih stanova</div>'
+      : tbl(TH(['Stan','Kupac','Vrijednost','Isplaćeno','Preostalo']), rows);
+  }
+
+  else if (type === 'naplaceno-stanovi') {
+    title = 'Naplaćeno — Stanovi';
+    const paid = DATA.apartments.filter(a => a.prodat && !a.vlasnik_parcele && a.isplaceno > 0)
+      .sort((a,b) => b.isplaceno - a.isplaceno);
+    const total = paid.reduce((s,a) => s + a.isplaceno, 0);
+    const rows = paid.map(a => TR([
+      `<strong>${a.lamela}-${a.stan}</strong>`,
+      a.ime || '—',
+      fmtEur(a.vrednost_sa_pdv),
+      `<span style="color:var(--success);font-weight:600;">${fmtEur(a.isplaceno)}</span>`,
+      `<span style="color:${a.preostalo>0?'var(--warning)':'var(--success)'};">${fmtEur(a.preostalo)}</span>`
+    ])).join('');
+    const footer = `<tr style="background:var(--surface-2);"><td colspan="3" style="padding:9px 12px;font-weight:700;">UKUPNO</td><td style="padding:9px 12px;text-align:right;font-weight:700;color:var(--success);">${fmtEur(total)}</td><td></td></tr>`;
+    body = paid.length === 0 ? '<div style="padding:40px;text-align:center;color:var(--text-dim);">Nema uplata</div>'
+      : tbl(TH(['Stan','Kupac','Vrijednost','Isplaćeno','Preostalo']), rows + footer);
+  }
+
+  else if (type === 'garaze-prodato') {
+    title = 'Prodane garaže';
+    const sold = (DATA.garages||[]).filter(g => g.prodat && !g.vlasnik_parcele).sort((a,b) => a.broj - b.broj);
+    const rows = sold.map(g => TR([
+      `<strong>G-${g.broj}</strong>`,
+      g.ime || '—',
+      fmtEur(g.vrednost),
+      `<span style="color:var(--success);">${fmtEur(g.naplaceno)}</span>`,
+      `<span style="color:${g.preostalo>0?'var(--danger)':'var(--success)'};">${fmtEur(g.preostalo)}</span>`
+    ])).join('');
+    body = sold.length === 0 ? '<div style="padding:40px;text-align:center;color:var(--text-dim);">Nema prodatih garaža</div>'
+      : tbl(TH(['Garaža','Kupac','Vrijednost','Naplaćeno','Preostalo']), rows);
+  }
+
+  else if (type === 'ukupno-naplaceno') {
+    title = 'Ukupno naplaćeno — pregled';
+    const aptPaid = DATA.apartments.filter(a=>!a.vlasnik_parcele).reduce((s,a)=>s+a.isplaceno,0);
+    const garPaid = (DATA.garages||[]).filter(g=>!g.vlasnik_parcele).reduce((s,g)=>s+g.naplaceno,0);
+    const ostPaid = (DATA.ostave||[]).filter(o=>!o.vlasnik_parcele).reduce((s,o)=>s+o.naplaceno,0);
+    const ukupno  = aptPaid + garPaid + ostPaid;
+    const aptRem  = DATA.apartments.filter(a=>!a.vlasnik_parcele).reduce((s,a)=>s+a.preostalo,0);
+    const garRem  = (DATA.garages||[]).filter(g=>!g.vlasnik_parcele).reduce((s,g)=>s+g.preostalo,0);
+    const ostRem  = (DATA.ostave||[]).filter(o=>!o.vlasnik_parcele).reduce((s,o)=>s+o.preostalo,0);
+    const rows = [
+      TR(['Stanovi', fmtEur(aptPaid), `<span style="color:var(--warning);">${fmtEur(aptRem)}</span>`]),
+      TR(['Garaže',  fmtEur(garPaid), `<span style="color:var(--warning);">${fmtEur(garRem)}</span>`]),
+      TR(['Ostave',  fmtEur(ostPaid), `<span style="color:var(--warning);">${fmtEur(ostRem)}</span>`]),
+      `<tr style="background:var(--surface-2);"><td style="padding:10px 12px;font-weight:700;">UKUPNO</td><td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--success);">${fmtEur(ukupno)}</td><td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--danger);">${fmtEur(aptRem+garRem+ostRem)}</td></tr>`
+    ].join('');
+    body = tbl(TH(['Kategorija','Naplaćeno','Preostalo']), rows);
+  }
+
+  m.innerHTML = `
+    <div class="modal-header">
+      <div><div class="modal-title">${title}</div></div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">${body}</div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Zatvori</button></div>`;
+  document.getElementById('modal').classList.add('active');
+}
+
 // --- DASHBOARD ---
 function renderDashboard(c) {
   const apts = DATA.apartments;
@@ -1362,22 +1445,22 @@ function renderDashboard(c) {
   
   c.innerHTML = `
     <div class="stats-grid">
-      <div class="stat-card">
+      <div class="stat-card" style="cursor:pointer;" onclick="showDashboardModal('prodati-stanovi')" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
         <div class="stat-label">Prodati stanovi</div>
         <div class="stat-value accent">${aptSold} / ${aptZaProdaju.length}</div>
         <div class="stat-sub">${aptZaProdaju.length > 0 ? ((aptSold/aptZaProdaju.length)*100).toFixed(1) : 0}% od ${aptZaProdaju.length} za prodaju</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" style="cursor:pointer;" onclick="showDashboardModal('naplaceno-stanovi')" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
         <div class="stat-label">Naplaćeno (stanovi)</div>
         <div class="stat-value success">${fmtEur(aptPaid)}</div>
         <div class="stat-sub">Preostalo: ${fmtEur(aptRemaining)}</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" style="cursor:pointer;" onclick="showDashboardModal('garaze-prodato')" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
         <div class="stat-label">Garaže prodato</div>
         <div class="stat-value">${garSold} / ${garZaProdaju.length}</div>
         <div class="stat-sub">Naplaćeno: ${fmtEur(garPaid)}</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" style="cursor:pointer;" onclick="showDashboardModal('ukupno-naplaceno')" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
         <div class="stat-label">Ukupno naplaćeno</div>
         <div class="stat-value accent">${fmtEur(totalPaid)}</div>
         <div class="stat-sub">${totalRec} priznanica izdato</div>
@@ -2165,10 +2248,11 @@ function renderApartmentModal(a) {
           </select>
         </div>
         <div class="form-field">
-          <label>Ugovor potpisan</label>
+          <label>Ugovor / Predugovor</label>
           <select id="f_ugovor">
-            <option value="false" ${!a.ugovor ? 'selected' : ''}>Ne</option>
-            <option value="true" ${a.ugovor ? 'selected' : ''}>Da</option>
+            <option value="ne" ${!a.ugovor && !a.predugovor ? 'selected' : ''}>Ne</option>
+            <option value="predugovor" ${a.predugovor && !a.ugovor ? 'selected' : ''}>Predugovor</option>
+            <option value="ugovor" ${a.ugovor ? 'selected' : ''}>Ugovor</option>
           </select>
         </div>
         <div class="form-field">
@@ -2341,7 +2425,8 @@ function saveApartment(lamela, stan, isNew) {
     sprat: document.getElementById('f_sprat').value.trim(),
     ime: document.getElementById('f_ime').value.trim(),
     prodat: document.getElementById('f_prodat').value === 'true',
-    ugovor: document.getElementById('f_ugovor').value === 'true',
+    ugovor: document.getElementById('f_ugovor').value === 'ugovor',
+    predugovor: document.getElementById('f_ugovor').value === 'predugovor',
     povrsina: parseFloat(document.getElementById('f_povrsina').value) || 0,
     cena_m2_pdv: parseFloat(document.getElementById('f_cena_m2_pdv').value) || 0,
     vrednost_bez_pdv: parseFloat(document.getElementById('f_vred_bez').value) || 0,
@@ -3634,7 +3719,7 @@ function autoSaveApartmentThenPlan(lamela, stan) {
     const el = document.getElementById(id);
     if (!el) return;
     if (id === 'f_prodat') updates.prodat = el.value === 'true';
-    else if (id === 'f_ugovor') updates.ugovor = el.value === 'true';
+    else if (id === 'f_ugovor') { updates.ugovor = el.value === 'ugovor'; updates.predugovor = el.value === 'predugovor'; }
     else if (['f_cena_m2_pdv','f_vred_sa','f_vred_bez'].includes(id)) {
       const key = id === 'f_cena_m2_pdv' ? 'cena_m2_pdv' : id === 'f_vred_sa' ? 'vrednost_sa_pdv' : 'vrednost_bez_pdv';
       updates[key] = parseFloat(el.value) || old[key] || 0;
