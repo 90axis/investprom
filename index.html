@@ -7,7 +7,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#1a2332">
+<meta name="theme-color" content="#1b2e42">
 <meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20,18 +20,18 @@
 
 /* Jedina fiksna neutralna tema */
 :root {
-  --bg: #0d1b2a;
-  --surface: #1a2a3d;
-  --surface-2: #1f3248;
-  --surface-3: #263d56;
+  --bg: #1b2e42;
+  --surface: #253d56;
+  --surface-2: #2d4a66;
+  --surface-3: #365575;
   --accent: #d4a574;
   --accent-hover: #e3b584;
-  --text: #f0f4f8;
-  --text-dim: #8fafc9;
+  --text: #f2f6fa;
+  --text-dim: #b0c8dc;
   --success: #00e676;
   --danger: #ff5252;
   --warning: #ffab40;
-  --border: rgba(255,255,255,0.18);
+  --border: rgba(255,255,255,0.22);
   --chart-paid: #00e676;
   --chart-expected: #ff9100;
   color-scheme: dark;
@@ -42,6 +42,8 @@ html, body {
   height: 100%;
   overflow: hidden;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
   background: var(--bg);
   color: var(--text);
   user-select: none;
@@ -57,7 +59,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse at top, #1a2332 0%, #0f1419 100%);
+  background: radial-gradient(ellipse at top, #1b2e42 0%, #16263a 100%);
   z-index: 1000;
 }
 
@@ -207,7 +209,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 
 /* ===== SIDEBAR ===== */
 .sidebar {
-  background: var(--surface);
+  background: var(--surface-2);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -405,8 +407,8 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   background: var(--surface);
   border: 1px solid rgba(255,255,255,0.2);
   border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  padding: 22px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .stat-label {
@@ -414,11 +416,11 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .stat-value {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.5px;
 }
@@ -426,7 +428,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 .stat-sub {
   font-size: 12px;
   color: var(--text-dim);
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .stat-value.accent { color: var(--accent); }
@@ -457,7 +459,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 
 .panel-title {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .panel-body {
@@ -468,7 +470,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .data-table thead {
@@ -482,7 +484,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   padding: 12px 10px;
   text-align: left;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -491,7 +493,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 }
 
 .data-table td {
-  padding: 10px;
+  padding: 11px 10px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -731,11 +733,12 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   color: var(--text-dim);
   margin-bottom: 6px;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
+  font-weight: 600;
 }
 
 .form-field input, .form-field select, .form-field textarea {
-  padding: 10px 12px;
+  padding: 11px 13px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 8px;
