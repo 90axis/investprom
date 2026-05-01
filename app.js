@@ -1195,7 +1195,7 @@ function saveUplataField(aptId, field, value) {
 
 function renderUplate(c) {
   const uData = getUplateData();
-  const apts = DATA.apartments.filter(a => a.prodat && a.ime);
+  const apts = DATA.apartments.filter(a => (a.prodat || a.vlasnik_parcele) && a.ime);
   apts.sort((a, b) => {
     if (a.lamela !== b.lamela) return (a.lamela||'').localeCompare(b.lamela||'');
     return (a.stan||0) - (b.stan||0);
