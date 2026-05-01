@@ -2276,6 +2276,10 @@ function renderApartmentModal(a) {
           <input type="number" step="0.01" id="f_vred_bez" value="${a.vrednost_bez_pdv || ''}" readonly style="color:var(--text-dim);">
         </div>
         <div class="form-field">
+          <label>Datum prodaje</label>
+          <input type="date" id="f_datum_prodaje" value="${a.datum_prodaje || ''}">
+        </div>
+        <div class="form-field">
           <label>Cena u ugovoru/predugovoru <span style="color:var(--text-dim);font-size:11px;">(skrivena kolona)</span></label>
           <input type="number" step="0.01" id="f_ugovorena_cena" value="${a.ugovorena_cena || ''}" placeholder="Unesi ako se razlikuje od tržišne">
         </div>
@@ -2433,7 +2437,8 @@ function saveApartment(lamela, stan, isNew) {
     vrednost_sa_pdv: parseFloat(document.getElementById('f_vred_sa').value) || 0,
     pdv_pct: parseFloat(document.getElementById('f_pdv_pct')?.value) ?? 10,
     napomena: document.getElementById('f_napomena').value.trim(),
-    ugovorena_cena: parseFloat(document.getElementById('f_ugovorena_cena')?.value) || null
+    ugovorena_cena: parseFloat(document.getElementById('f_ugovorena_cena')?.value) || null,
+    datum_prodaje: document.getElementById('f_datum_prodaje')?.value || null
   };
   data.cena_m2 = data.povrsina ? data.vrednost_bez_pdv / data.povrsina : 0;
   
@@ -3713,13 +3718,14 @@ function autoSaveApartmentThenPlan(lamela, stan) {
   const old = DATA.apartments[idx];
   
   // Read all form fields that exist
-  const fields = ['f_ime','f_prodat','f_ugovor','f_sprat','f_napomena','f_cena_m2_pdv','f_vred_sa','f_vred_bez'];
+  const fields = ['f_ime','f_prodat','f_ugovor','f_sprat','f_napomena','f_cena_m2_pdv','f_vred_sa','f_vred_bez','f_datum_prodaje'];
   const updates = {};
   fields.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     if (id === 'f_prodat') updates.prodat = el.value === 'true';
     else if (id === 'f_ugovor') { updates.ugovor = el.value === 'ugovor'; updates.predugovor = el.value === 'predugovor'; }
+    else if (id === 'f_datum_prodaje') updates.datum_prodaje = el.value || null;
     else if (['f_cena_m2_pdv','f_vred_sa','f_vred_bez'].includes(id)) {
       const key = id === 'f_cena_m2_pdv' ? 'cena_m2_pdv' : id === 'f_vred_sa' ? 'vrednost_sa_pdv' : 'vrednost_bez_pdv';
       updates[key] = parseFloat(el.value) || old[key] || 0;
@@ -6741,6 +6747,52 @@ function renderUpcomingRatesPanel() {
   `;
 }
 
+function showMonthlySalesModal(monthKey) {
+  const monthNames = ['Januar','Februar','Mart','April','Maj','Jun','Jul','Avgust','September','Oktobar','Novembar','Decembar'];
+  const [yr, mo] = monthKey.split('-').map(Number);
+  const label = `${monthNames[mo-1]} ${yr}`;
+
+  const items = [
+    ...DATA.apartments.map(a => ({ datum: a.datum_prodaje, val: a.vrednost_sa_pdv, label: `Stan ${a.lamela}-${a.stan}`, ime: a.ime||'' })),
+    ...(DATA.garages || []).map(g => ({ datum: g.datum_prodaje, val: g.vrednost, label: `Garaža G-${g.broj}`, ime: g.ime||'' })),
+    ...(DATA.ostave || []).map(o => ({ datum: o.datum_prodaje, val: o.vrednost, label: `Ostava ${o.broj||''}`, ime: o.ime||'' }))
+  ].filter(it => it.datum && it.datum.substring(0,7) === monthKey);
+
+  const totalRev = items.reduce((s,it) => s + (it.val||0), 0);
+
+  const rows = items.map(it => `
+    <tr>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);font-weight:500;">${it.label}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text-dim);">${it.ime}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;color:var(--success);font-weight:600;">${fmtEur(it.val)}</td>
+    </tr>`).join('');
+
+  showModal(`
+    <div class="modal-header">
+      <div class="modal-title">🏷️ Prodaja — ${label}</div>
+      <button class="btn btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="padding:8px 12px;font-size:11px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border-bottom:2px solid var(--border);">Nekretnina</th>
+            <th style="padding:8px 12px;font-size:11px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border-bottom:2px solid var(--border);">Kupac</th>
+            <th style="padding:8px 12px;font-size:11px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border-bottom:2px solid var(--border);text-align:right;">Vrednost</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" style="padding:10px 12px;font-weight:700;font-size:13px;">Ukupno (${items.length})</td>
+            <td style="padding:10px 12px;font-weight:700;font-size:13px;text-align:right;color:var(--success);">${fmtEur(totalRev)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `);
+}
+
 function renderMonthlySalesChart() {
   const now = new Date();
   const monthNames = ['Jan','Feb','Mar','Apr','Maj','Jun','Jul','Avg','Sep','Okt','Nov','Dec'];
@@ -6760,9 +6812,9 @@ function renderMonthlySalesChart() {
   }
 
   const allItems = [
-    ...DATA.apartments.map(a => ({ datum: a.datum_prodaje, val: a.vrednost_sa_pdv })),
-    ...(DATA.garages || []).map(g => ({ datum: g.datum_prodaje, val: g.vrednost })),
-    ...(DATA.ostave || []).map(o => ({ datum: o.datum_prodaje, val: o.vrednost }))
+    ...DATA.apartments.map(a => ({ datum: a.datum_prodaje, val: a.vrednost_sa_pdv, label: `Stan ${a.lamela}-${a.stan}`, ime: a.ime||'' })),
+    ...(DATA.garages || []).map(g => ({ datum: g.datum_prodaje, val: g.vrednost, label: `Garaža G-${g.broj}`, ime: g.ime||'' })),
+    ...(DATA.ostave || []).map(o => ({ datum: o.datum_prodaje, val: o.vrednost, label: `Ostava ${o.broj||''}`, ime: o.ime||'' }))
   ];
 
   allItems.forEach(item => {
@@ -6793,7 +6845,7 @@ function renderMonthlySalesChart() {
           ${last12.map(m => {
             const hPct = Math.round((m.sales / maxSales) * 100);
             return `
-              <div style="display:flex; flex-direction:column; align-items:center; gap:3px; height:100%;" title="${m.label} ${m.year}: ${m.sales} prodaja · ${fmtEur(m.revenue)}">
+              <div style="display:flex; flex-direction:column; align-items:center; gap:3px; height:100%; cursor:${m.sales>0?'pointer':'default'};" title="${m.label} ${m.year}: ${m.sales} prodaja · ${fmtEur(m.revenue)}" onclick="${m.sales>0?`showMonthlySalesModal('${m.key}')`:''}" >
                 <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end; width:100%;">
                   ${m.sales > 0 ? `<div style="font-size:9px; font-weight:700; text-align:center; color:${m.isCurrent ? 'var(--accent)' : 'var(--success)'}; margin-bottom:2px;">${m.sales}</div>` : ''}
                   <div style="width:100%; height:${hPct}%; min-height:${m.sales>0?'4px':'0'}; background:${m.isCurrent ? 'linear-gradient(to top, var(--accent), #e3b584)' : 'linear-gradient(to top, #00c853, #69f0ae)'}; border-radius:3px 3px 0 0; transition:height 0.3s;"></div>

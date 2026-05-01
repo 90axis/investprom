@@ -251,7 +251,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  color: var(--text-dim);
+  color: var(--text);
   font-size: 14px;
   font-weight: 500;
   border-left: 3px solid transparent;
@@ -386,7 +386,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 .content {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   padding: 24px;
   -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
   overscroll-behavior: contain;
@@ -913,6 +913,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--success);
+  text-align: right;
 }
 
 /* Utility */
