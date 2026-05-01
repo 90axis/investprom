@@ -277,8 +277,16 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   flex-shrink: 0;
 }
 
+.sidebar nav {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: none;
+}
+.sidebar nav::-webkit-scrollbar { display: none; }
+
 .sidebar-footer {
-  margin-top: auto;
+  flex-shrink: 0;
   padding: 16px 20px;
   border-top: 1px solid var(--border);
 }
