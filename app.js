@@ -7097,4 +7097,8 @@ function showExpectedThisMonth() {
   });
 })();
 
+// Expose functions required by inline onclick handlers in index.html
+window.doLogin = doLogin;
+window.doBiometric = doBiometric;
+
 init();
